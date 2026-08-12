@@ -1,0 +1,34 @@
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+
+build/
+dist/
+*.egg-info/
+*.egg
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+.env
+.envrc
+.venv
+env/
+venv/
+
+.DS_Store
+.vscode/
+
+# Model weights are shared out-of-band and pointed at via $WEIGHTS_DIR
+weights/
+
+# Training outputs / logs
+tb_logs/
+checkpoints/
+outputs/
+logs/
+wandb/
+lightning_logs/

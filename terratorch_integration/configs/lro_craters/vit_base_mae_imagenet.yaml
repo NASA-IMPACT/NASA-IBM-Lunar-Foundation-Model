@@ -1,0 +1,113 @@
+# Lunar Crater Detection (LRO grayscale) — 100% training data
+# Backbone: timm ViT-Base/16, MAE self-supervised on ImageNet-1k.
+# The pretrained pos-emb is interpolated from its native 224 grid to 512.
+#
+# Framework: Mask R-CNN, matching the published LRO_Craters baseline.
+# Metrics are reported on the validation split; this benchmark has no
+# held-out test set.
+#
+# RUN:
+#   PYTHONPATH=.:$PYTHONPATH \
+#   terratorch fit --config terratorch_integration/configs/lro_craters/lro_final/vit_base_mae_imagenet.yaml
+seed_everything: 42
+custom_modules_path: terratorch_integration
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  precision: "32"
+  max_epochs: 100
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 10
+  enable_checkpointing: true
+  logger:
+    class_path: TensorBoardLogger
+    init_args:
+      save_dir: tb_logs/lro-crater
+      name: vit_base_mae_imagenet
+  callbacks:
+    - class_path: LearningRateMonitor
+      init_args:
+        logging_interval: epoch
+    - class_path: ModelCheckpoint
+      init_args:
+        dirpath: tb_logs/lro-crater/checkpoints/vit_base_mae_imagenet
+        monitor: val_bbox_map
+        mode: max
+        filename: best-{epoch:02d}-{val_bbox_map:.3f}
+        save_last: true
+    - class_path: EarlyStopping
+      init_args:
+        monitor: val_bbox_map
+        mode: max
+        patience: 15
+
+data:
+  class_path: terratorch_integration.data_adapter.LunarCraterDataModule
+  init_args:
+    root: <dataset_root>/LRO_craters
+    batch_size: 4
+    num_workers: 4
+    image_size: 512
+    output_mode: image
+    norm_mean: 0.251561
+    norm_std: 0.121082
+    load_masks: true             # rasterize COCO polygons into per-instance masks
+    train_transforms:
+      class_path: terratorch_integration.data_utils.D4DetectionTransform
+      init_args:
+        image_keys: [image]
+        p: 1.0
+
+model:
+  class_path: terratorch_integration.LunarObjectDetectionTask
+  init_args:
+    model_factory: ObjectDetectionModelFactory
+    model_args:
+      framework: mask-rcnn       # <-- adds the mask head
+
+      # timm ViT-Base at patch 16, MAE self-supervised on ImageNet-1k.
+      # img_size=512 tells timm to interpolate the pretrained pos_emb from
+      # its native 224 grid to our 512 grid at model-creation time.
+      # in_chans=1 uses adapt_input_conv to average the 3-channel patch embed
+      # weights down to 1 channel.
+      backbone: timm_vit_base_patch16_224.mae
+      backbone_pretrained: true
+      backbone_in_chans: 1
+      backbone_img_size: 512
+      backbone_out_indices: [2, 5, 8, 11]
+
+      num_classes: 2
+      framework_min_size: 512
+      framework_max_size: 512
+
+      in_channels: 1
+      necks:
+        # Single-scale ViT tokens need reshape -> interpolate to pyramidal -> FPN.
+        # 512 / patch_size(16) = 32 spatial tokens per side (1024 total).
+        - name: ReshapeTokensToImage
+          remove_cls_token: true          # timm ViT prepends CLS by default
+          h: 32
+        - name: LearnedInterpolateToPyramidal
+        - name: FeaturePyramidNetworkNeck
+
+    freeze_backbone: false
+    freeze_decoder: false
+
+    class_names:
+      - Background
+      - Crater
+
+    anchor_sizes: [[8], [16], [32], [64]]
+    anchor_aspect_ratios: [0.5, 1.0, 2.0]
+
+    # Same LLRD recipe as 07_ni_lfm_ps8 — same architecture, same
+    # fine-tuning recipe, only the pretraining differs.
+    backbone_lr: 5.0e-5
+    head_lr: 1.0e-4
+    layer_decay: 0.75
+    weight_decay: 0.05
+    head_weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+    warmup_steps: 500
+    eta_min: 1.0e-6

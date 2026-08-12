@@ -1,0 +1,69 @@
+#!/bin/bash
+# ============================================================================
+# Example PBS wrapper for a single-GPU finetuning run on an HPC cluster.
+#
+# Edit for your site: PBS group, queue, walltime, mem/gpu resources, and the
+# conda / venv activation. The paths and the `CFG_PATH` variable below are
+# placeholders — set them to your bundle layout and target config.
+# ============================================================================
+
+# --- PBS directives ---------------------------------------------------------
+#PBS -N graha-lunar-fm-finetune
+#PBS -W group_list=YOUR_GROUP           # <-- edit
+#PBS -W umask=002
+#PBS -q gpu_normal                      # <-- edit for your queue
+#PBS -l walltime=2:00:00
+#PBS -l select=1:ncpus=16:ngpus=1:mem=128GB
+#PBS -l place=scatter:excl
+#PBS -koed
+#PBS -o logs/finetune.out
+#PBS -e logs/finetune.err
+
+# --- Config to run ----------------------------------------------------------
+CFG_PATH="terratorch_integration/configs/prosp/prospectivity_graha.yaml"
+
+# --- Prep -------------------------------------------------------------------
+set +e
+cd "$PBS_O_WORKDIR"
+JOB_ID=$PBS_JOBID
+echo "JOB_ID: ${JOB_ID}"
+
+# --- Environment ------------------------------------------------------------
+# Load your site's conda / miniconda / pyenv here. Example (conda):
+#   module load miniconda3
+#   source activate graha-lunar-fm
+# Example (pyenv):
+#   eval "$(pyenv init -)"
+#   pyenv activate graha-lunar-fm
+
+# Repo root must be importable.
+export PYTHONPATH="$PWD"
+
+# --- Rename outputs to include job id --------------------------------------
+FINAL_OUT="logs/${JOB_ID}_finetune.out"
+FINAL_ERR="logs/${JOB_ID}_finetune.err"
+[ -f "logs/finetune.out" ] && mv "logs/finetune.out" "$FINAL_OUT"
+[ -f "logs/finetune.err" ] && mv "logs/finetune.err" "$FINAL_ERR"
+
+echo "================================"
+echo "Graha Lunar-FM finetuning"
+echo "  JobID:  ${JOB_ID}"
+echo "  Config: ${CFG_PATH}"
+echo "  Out:    ${FINAL_OUT}"
+echo "  Err:    ${FINAL_ERR}"
+echo "================================"
+
+# --- Run --------------------------------------------------------------------
+terratorch fit -c "${CFG_PATH}"
+
+EXIT_CODE=$?
+set -e
+echo ""
+echo "================================"
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "Finetuning completed successfully."
+else
+    echo "Finetuning failed with exit code ${EXIT_CODE}. See ${FINAL_ERR}."
+fi
+echo "================================"
+exit $EXIT_CODE

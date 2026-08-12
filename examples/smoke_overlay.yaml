@@ -1,0 +1,37 @@
+# Smoke-test overlay: pass it AFTER the real config so its keys win.
+#
+#   PYTHONPATH=. terratorch fit \
+#     -c terratorch_integration/configs/<path>/<config>.yaml \
+#     -c examples/smoke_overlay.yaml \
+#     --data.num_workers 0
+#
+# One short epoch on CPU: enough to build the backbone, materialise the LLRD /
+# LoRA parameter groups, run a training step and a validation step, and fire
+# every callback the config declares.
+#
+# Two things this overlay exists to avoid:
+#
+#  1. `--trainer.max_steps 1` truncates the epoch before validation ever runs.
+#     Configs with a val-monitored EarlyStopping / ModelCheckpoint then abort
+#     with "Early stopping conditioned on metric `val_map` which is not
+#     available" — a harness artefact, not a config defect. Bound by epoch and
+#     let validation happen.
+#  2. `limit_train_batches: 1` does not mean "one batch". Trainer annotates the
+#     argument `Union[int, float]`, jsonargparse resolves the literal to float
+#     1.0, and Lightning's _determine_batch_limits reads float 1.0 as "100% of
+#     the batches" — only int 1 means one batch. Any integer > 1 is unambiguous
+#     (Lightning converts it with int(batches)), hence 2 below.
+trainer:
+  max_epochs: 1
+  accelerator: cpu
+  devices: 1
+  precision: 32
+  limit_train_batches: 2
+  limit_val_batches: 2
+  num_sanity_val_steps: 0
+  # Some configs declare a LearningRateMonitor callback, which refuses to run
+  # with `logger: false`. Redirect the logger instead of disabling it.
+  logger:
+    class_path: lightning.pytorch.loggers.CSVLogger
+    init_args:
+      save_dir: /tmp/smoke_logs
