@@ -9,10 +9,10 @@ import torch
 
 
 def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
-    """Load a single band from a NetCDF4/HDF5 `.nc` file as a 2-D array.
+    """Load a single band from a NetCDF4/HDF5 `.nc` or NumPy `.npy` tile as a 2-D array.
 
     Args:
-        path: Path to the `.nc` file.
+        path: Path to the `.nc` / `.npy` file (`band_name` is ignored for `.npy`).
         band_name: HDF5 dataset key to read (e.g. `"band_data"` for the
             NAC/DTM tiles, `"data"` for the IMP segmentation tiles).
 
@@ -21,8 +21,12 @@ def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
         `(1, H, W)` (single-band-first convention) the leading singleton
         is squeezed away.
     """
-    with h5py.File(path, "r") as f:
-        arr = np.asarray(f[band_name], dtype=np.float32)
+    if Path(path).suffix.lower() == ".npy":
+        # Released NAC crater tiles ship as .npy; pretraining tiles are .nc.
+        arr = np.asarray(np.load(path), dtype=np.float32)
+    else:
+        with h5py.File(path, "r") as f:
+            arr = np.asarray(f[band_name], dtype=np.float32)
     if arr.ndim == 3 and arr.shape[0] == 1:
         arr = arr[0]
     return arr

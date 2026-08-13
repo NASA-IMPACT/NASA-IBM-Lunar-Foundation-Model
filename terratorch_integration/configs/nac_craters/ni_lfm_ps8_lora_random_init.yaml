@@ -1,11 +1,11 @@
 # Lunar Crater Detection (NAC)
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8 (LoRA PEFT variant)
+# Backbone: NASA-IBM Lunar Foundation Model at patch size 8, randomly initialized (no pretraining), LoRA PEFT variant
 #
 # Requires: pip install terratorch[peft]
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/nac_craters/ni_lfm_ps8_lora.yaml
+#   terratorch fit --config terratorch_integration/configs/nac_craters/ni_lfm_ps8_lora_random_init.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -22,14 +22,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/nac-crater
-      name: ni_lfm_ps8_lora
+      name: ni_lfm_ps8_lora_random_init
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/nac-crater/checkpoints/ni_lfm_ps8_lora
+        dirpath: tb_logs/nac-crater/checkpoints/ni_lfm_ps8_lora_random_init
         monitor: val_map
         mode: max
         save_top_k: 1
@@ -67,7 +67,6 @@ model:
     model_args:
       framework: faster-rcnn
       backbone: ni_lfm_v1_base
-      backbone_checkpoint_path: backbone/checkpoint.pt
       backbone_cfg: backbone/config.yaml
       num_classes: 2
       framework_min_size: 256

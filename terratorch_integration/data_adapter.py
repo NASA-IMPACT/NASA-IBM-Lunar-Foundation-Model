@@ -929,7 +929,8 @@ class LunarNACDTMDataset(Dataset):
     Image paths are loaded from a `metadata.parquet` file that contains
     `PHO_TILE` and `DTM_TILE` columns with paths relative to `data_dir`,
     and a `dataset` column (`"train"` / `"val"` / `"test"`) that
-    determines the split.
+    determines the split.  Pass `metadata_file=None` to index off the COCO
+    `annotations_file` instead (NAC-only; metadata tokens come out zeroed).
 
     Which modalities are loaded is controlled by `modalities` (default `["nac", "dtm"]`).
     Pass `["nac"]` or `["dtm"]` to use only one.
@@ -966,7 +967,7 @@ class LunarNACDTMDataset(Dataset):
     def __init__(
         self,
         data_dir: str,
-        metadata_file: str,
+        metadata_file: str | None,
         annotations_file: str,
         modalities: list[str] | None = None,
         used_for_labeling_only: bool = False,
@@ -1001,7 +1002,9 @@ class LunarNACDTMDataset(Dataset):
 
         Args:
             data_dir: Root directory that `PHO_TILE` / `DTM_TILE` paths from the parquet are resolved against.
-            metadata_file: Path to `metadata.parquet`.  Must contain columns `PHO_TILE`, `DTM_TILE`, `dataset`
+            metadata_file: Path to `metadata.parquet`, or `None` to index off the COCO
+                `annotations_file` (image records must carry `file_name` and `split`).
+                When given, must contain columns `PHO_TILE`, `DTM_TILE`, `dataset`
                 (`"train"` / `"val"` / `"test"`), and `used_for_labeling` (`"yes"` / `"no"`).
                 Used as the sole source of splits and image paths. Also provides metadata tokens for the model.
             annotations_file: Path to the COCO-format annotations JSON.
@@ -1078,8 +1081,18 @@ class LunarNACDTMDataset(Dataset):
             binning_config_path=metadata_binning_config_path,
         )
 
-        # Load metadata parquet — source of splits, image paths, and metadata
-        meta_df = pd.read_parquet(metadata_file)
+        # Load metadata parquet — source of splits, image paths, and metadata.
+        # With `metadata_file: null` the COCO file stands in: its image records
+        # carry `file_name` (relative to data_dir) and `split`, which is all the
+        # index below needs. That is the layout the released NAC bundle ships in.
+        if metadata_file is None:
+            with open(annotations_file, "r") as _f:
+                _imgs = json.load(_f)["images"]
+            meta_df = pd.DataFrame(
+                [{**i, "PHO_TILE": i["file_name"], "DATASET": i["split"]} for i in _imgs]
+            )
+        else:
+            meta_df = pd.read_parquet(metadata_file)
         # Normalize column names to upper-case so downstream lookups are
         # case-insensitive (handles "dataset"/"DATASET", "used_for_labeling", etc.).
         meta_df.columns = meta_df.columns.str.upper()
@@ -1099,14 +1112,21 @@ class LunarNACDTMDataset(Dataset):
         # Build per-sample path records and metadata lookup indexed by pho filename
         self._samples: list[dict[str, Any]] = []
         self._metadata_lookup: dict[str, Any] = {}
+        has_dtm = "DTM_TILE" in split_df.columns
         for _, row in split_df.iterrows():
             pho_name = Path(row["PHO_TILE"]).name
             self._samples.append({
                 "pho_name": pho_name,
                 "pho_path": self.data_dir / row["PHO_TILE"],
-                "dtm_path": self.data_dir / row["DTM_TILE"],
+                "dtm_path": self.data_dir / row["DTM_TILE"] if has_dtm else None,
             })
             self._metadata_lookup[pho_name] = row
+
+        if metadata_file is None:
+            # COCO image records carry no photometric metadata (EMISSION_ANGLE,
+            # ...), so leave the lookup empty; __getitem__ then emits the zero
+            # metadata-token tensor it already uses for unknown tiles.
+            self._metadata_lookup.clear()
 
         # Load annotations and intersect with the metadata-derived sample list
         with open(annotations_file, "r") as f:
@@ -1118,9 +1138,9 @@ class LunarNACDTMDataset(Dataset):
 
         # Mapping from pho_name → COCO image_id for annotation lookup
         self._pho_name_to_img_id: dict[str, int] = {
-            img["file_name"]: img["id"]
+            Path(img["file_name"]).name: img["id"]
             for img in coco_data["images"]
-            if img["file_name"] in split_pho_names
+            if Path(img["file_name"]).name in split_pho_names
         }
 
         # Build image_id → list[annotation] mapping with diameter filtering
@@ -1569,7 +1589,7 @@ class LunarNACDTMDataset(Dataset):
 class LunarNACDTMDataModule(LightningDataModule):
     """TerraTorch-compatible data module for NAC and/or DTM crater detection.
 
-    Image paths and splits are driven entirely by `metadata_file` (a parquet
+    Image paths and splits are driven by `metadata_file` (a parquet
     with `PHO_TILE`, `DTM_TILE`, and `dataset` columns).  `data_dir` is
     the root that those relative paths are joined against.
 
@@ -1597,7 +1617,7 @@ class LunarNACDTMDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str,
-        metadata_file: str,
+        metadata_file: str | None,
         annotations_file: str,
         modalities: list[str] | None = None,
         used_for_labeling_only: bool = False,
@@ -1640,7 +1660,8 @@ class LunarNACDTMDataModule(LightningDataModule):
         Args:
             data_dir: Root directory that `PHO_TILE` / `DTM_TILE` paths
                       from the parquet are resolved against.
-            metadata_file: Path to `metadata.parquet`.  Used as the sole
+            metadata_file: Path to `metadata.parquet`, or `None` to index off the
+                COCO `annotations_file`.  When given, used as the sole
                            source of splits and image paths.
             annotations_file: Path to the COCO-format annotations JSON.
             modalities: List of modalities to load (`"nac"` and/or

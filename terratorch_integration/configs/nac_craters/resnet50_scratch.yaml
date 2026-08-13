@@ -1,11 +1,9 @@
 # Lunar Crater Detection (NAC)
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8 (LoRA PEFT variant)
-#
-# Requires: pip install terratorch[peft]
+# Backbone: timm ResNet-50, randomly initialized (no pretraining)
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/nac_craters/ni_lfm_ps8_lora.yaml
+#   terratorch fit --config terratorch_integration/configs/nac_craters/resnet50_scratch.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -14,26 +12,25 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: "32"
-  max_epochs: 50
+  max_epochs: 100
   check_val_every_n_epoch: 1
-  log_every_n_steps: 10
-  enable_checkpointing: true
+  log_every_n_steps: 5
   logger:
     class_path: TensorBoardLogger
     init_args:
-      save_dir: tb_logs/nac-crater
-      name: ni_lfm_ps8_lora
+      save_dir: tb_logs/nac-crater/
+      name: resnet50_scratch
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/nac-crater/checkpoints/ni_lfm_ps8_lora
+        dirpath: tb_logs/nac-crater/checkpoints/resnet50_scratch
         monitor: val_map
         mode: max
-        save_top_k: 1
         filename: best-{epoch:02d}-{val_map:.3f}
+        save_top_k: 1
         save_last: false
 
 data:
@@ -44,7 +41,6 @@ data:
     annotations_file: data/nac_craters_dataset/annotations_min5px.json
     modalities: [nac]
     metadata_tokenizer_path: ni_lfm/utils/tokenizer/trained/text_tokenizer.json
-    output_mode: packed
     batch_size: 4
     num_workers: 4
     image_size: 256
@@ -66,21 +62,15 @@ model:
     model_factory: ObjectDetectionModelFactory
     model_args:
       framework: faster-rcnn
-      backbone: ni_lfm_v1_base
-      backbone_checkpoint_path: backbone/checkpoint.pt
-      backbone_cfg: backbone/config.yaml
+      backbone: timm_resnet50
+      backbone_pretrained: false
+      backbone_in_chans: 1
+      backbone_features_only: true
+      backbone_out_indices: [1, 2, 3, 4]
+
       num_classes: 2
       framework_min_size: 256
       framework_max_size: 256
-
-      backbone_modalities:
-        - nac
-
-      backbone_patch_size: 8
-      backbone_remove_register_tokens: false
-      backbone_merge_method: concat
-
-      backbone_drop_path_rate_encoder: 0.1
 
       framework_rpn_fg_iou_thresh: 0.5
       framework_rpn_bg_iou_thresh: 0.2
@@ -99,12 +89,7 @@ model:
       in_channels: 1
       necks:
         - name: SelectIndices
-          indices: [2, 5, 8, 11]
-        - name: ReshapeTokensToImage
-          remove_cls_token: false
-          h: 32
-        - name: MultilayerSimpleFeaturePyramid
-          out_channels: 256
+          indices: [0, 1, 2, 3]
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false
@@ -120,32 +105,18 @@ model:
       max_detection_thresholds: [100, 300, 500]
       class_metrics: true
 
-    anchor_sizes: [[4, 6], [8, 12], [16, 24], [48, 96]]
-    anchor_aspect_ratios: [0.7, 1.0, 1.4]
-
     eval_box_detections_per_img: 600
     eval_box_nms_thresh: 0.3
     eval_rpn_post_nms_top_n_test: 3000
 
-    peft_config:
-      method: LORA
-      peft_config_kwargs:
-        r: 16
-        lora_alpha: 32
-        lora_dropout: 0.05
-        bias: none
-        target_modules:
-          - qkv
-          - mlp.fc1
-          - mlp.fc2
-          - mlp.fc3
-        exclude_modules: '.*decoder\..*'
+    anchor_sizes: [[4, 6], [8, 12], [16, 24], [48, 96]]
+    anchor_aspect_ratios: [0.7, 1.0, 1.4]
 
     backbone_lr: 1.0e-4
     head_lr: 1.0e-4
     layer_decay: 1.0
-    weight_decay: 0.0
-    head_weight_decay: 1.0e-3
+    weight_decay: 1.0e-4
+    head_weight_decay: 1.0e-4
     betas: [0.9, 0.999]
     warmup_steps: 500
     eta_min: 1.0e-6

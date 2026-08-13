@@ -37,10 +37,11 @@ trainer:
 data:
   class_path: terratorch_integration.data_adapter.LunarNACDTMDataModule
   init_args:
-    data_dir: <dataset_root>/NAC_craters
-    metadata_file: <dataset_root>/NAC_craters/metadata.parquet
-    annotations_file: <dataset_root>/NAC_craters/nac_handlabeled_annotations.json
+    data_dir: data/nac_craters_dataset
+    metadata_file: null   # tile paths and splits come from the COCO file below
+    annotations_file: data/nac_craters_dataset/annotations_min5px.json
     modalities: [nac]
+    metadata_tokenizer_path: ni_lfm/utils/tokenizer/trained/text_tokenizer.json
     output_mode: packed
     batch_size: 4
     num_workers: 4
