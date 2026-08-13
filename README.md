@@ -17,23 +17,38 @@ pip install -e .
 
 (or `conda create -n graha-lunar-fm python=3.12` if you prefer conda.)
 
-## Weights
+## Weights and data
 
-Weights are distributed out-of-band as a tarball. Unpack it so that the layout is:
+Configs use two relative roots, `data/` and `backbone/`, so no absolute paths are
+baked into any YAML. Point them at the shared release bundle with two symlinks:
+
+```bash
+B=/nobackupnfs1/sroy14/processed_data/Lunar/release_ni_lfm
+ln -sfn "$B/downstream_dataset"   data
+ln -sfn "$B/checkpoints/backbone" backbone
+```
+
+That gives every config the paths it expects:
 
 ```
-backbone/
-  checkpoint.pt        # base backbone checkpoint
-  config.yaml          # merged pretraining config + per-modality info (required)
+backbone/checkpoint.pt                 # base backbone checkpoint
+backbone/config.yaml                   # pretraining config + per-modality info (required)
+data/prospectivity_dataset/            # ice_prosp/
+data/imp_dataset/                      # imp/
+data/nac_craters_dataset/              # nac_craters/  (COCO: images/*.npy + annotations_min5px.json)
+data/wac_craters_dataset/              # wac_craters/  (images_tiff/, metadata.parquet, train|val|test.json)
 ```
 
-Every `ni_lfm_v1_*` config references `backbone/checkpoint.pt` and `backbone/config.yaml`. If your bundle lives elsewhere, symlink `./backbone` to it.
+**`backbone_cfg` is required** for `ni_lfm_v1_*` backbones — the wrapper raises
+`ValueError` if missing.
 
-**`backbone_cfg` is required** for `ni_lfm_v1_*` backbones — the wrapper raises `ValueError` if missing.
+To run against a different copy, re-point the symlinks rather than editing YAML.
+Single-value overrides also work, e.g.
+`--model.init_args.model_args.backbone_checkpoint_path /other/checkpoint.pt`.
 
-## Data
-
-Downstream configs reference data under `./data/…` — e.g. `data/LRO_Craters/`, `data/NAC_handlabeled_1m_256/`, `data/IMP_dataset/`, `data/prospectivity_dataset/`. Symlink `./data` at your dataset root. Each config's `data.init_args` block documents the exact subpaths it expects.
+> **`lro_craters/` has no data in this bundle.** Its 6 configs still carry
+> `<dataset_root>` placeholders; point `--data.root` at an LRO crater dataset to
+> run them.
 
 ## Finetuning
 
@@ -73,15 +88,17 @@ An example PBS wrapper for NASA-cluster batch submission lives at [`examples/pbs
 ## Repo layout
 
 ```
-graha-lunar-fm/
+ni-lfm/
 ├── ni_lfm/                       # model package (backbone, tokenizers, data utils)
 ├── terratorch_integration/       # TerraTorch datamodules + tasks + configs
 │   ├── configs/                  # runnable `terratorch fit` configs, grouped by task
 │   │   ├── nac_craters/          # NAC crater detection
 │   │   ├── wac_craters/          # WAC crater detection
+│   │   │   ├── full_data/        #   100% of the train split
+│   │   │   └── half_data/        #   50% of the train split (val/test still full)
 │   │   ├── lro_craters/          # LRO crater detection (grayscale JPGs)
 │   │   ├── imp/                  # Impact Melt Pond segmentation
-│   │   └── ice_prosp/             # Ice prospectivity
+│   │   └── ice_prosp/            # Ice prospectivity
 │   ├── data_adapter.py           # LunarCraterDataModule, LunarNACDTMDataModule, LunarWACCraterDataModule
 │   ├── data_utils.py             # D4DetectionTransform and related augmentations
 │   ├── lunar_backbone.py         # TerraTorch backbone wrapper

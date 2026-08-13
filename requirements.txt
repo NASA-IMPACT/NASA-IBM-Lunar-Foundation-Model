@@ -15,6 +15,13 @@ omegaconf>=2.3.0,<3          # terratorch_integration/lunar_backbone.py, ni_lfm/
 pillow>=12.2.0,<13           # PIL.Image in both datamodules
 rasterio>=1.5.0,<2           # terratorch_integration/data_adapter.py
 torchgeo>=0.9.0,<0.10        # terratorch_integration/lunar_object_detection_task.py
+albumentations>=2.0,<3       # every config's train_transform; >=2.0 is the
+                             # version terratorch_integration/determinism.py
+                             # reseeds (it hardcodes self.seed = None)
+segmentation-models-pytorch>=0.4,<0.6  # SMPModelFactory backs the Unet /
+                             # UnetPlusPlus / FPN / DeepLabV3Plus / Segformer
+                             # baselines in configs/imp/
+tensorboard>=2.18,<3         # TensorBoardLogger is the logger in every config
 
 # --- data I/O ---
 h5py>=3.16.0,<4              # .nc / HDF5 patch reads
