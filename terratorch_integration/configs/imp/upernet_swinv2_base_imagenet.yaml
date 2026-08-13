@@ -1,9 +1,9 @@
 # Lunar IMP Semantic Segmentation (IMP)
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8
+# Backbone: timm Swin-V2-Base (window 16, 256px), ImageNet-1k pretrained
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/ni_lfm_ps8.yaml
+#   terratorch fit --config terratorch_integration/configs/imp/upernet_swinv2_base_imagenet.yaml
 
 seed_everything: 23
 custom_modules_path: terratorch_integration
@@ -16,19 +16,18 @@ trainer:
   check_val_every_n_epoch: 1
   log_every_n_steps: 5
   gradient_clip_val: 1.0
-
   logger:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/imp
-      name: ni_lfm_ps8
+      name: upernet_swinv2_base_imagenet
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
-        logging_interval: epoch
+        logging_interval: step
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/imp/checkpoints/ni_lfm_ps8
+        dirpath: tb_logs/imp/checkpoints/upernet_swinv2_base_imagenet
         monitor: val/F1_Score
         mode: max
         filename: best-{epoch:02d}-{val/loss:.3f}
@@ -72,39 +71,38 @@ data:
           p: 0.5
       - class_path: albumentations.pytorch.transforms.ToTensorV2
 
-
 model:
   class_path: terratorch_integration.LunarSegmentationTask
   init_args:
-    backbone_lr: 1e-5
+    # Flat CNN recipe — do NOT enable LLRD (unfair baseline tuning).
+    backbone_lr: 1.0e-4
     head_lr: 1.0e-4
-    layer_decay: 0.75
-    weight_decay: 0.05
-    head_weight_decay: 1.0e-3
-    warmup_steps: 200
+    layer_decay: 1.0
+    weight_decay: 1.0e-4
+    head_weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+    warmup_steps: 500
     eta_min: 1.0e-6
+
     model_factory: EncoderDecoderFactory
     model_args:
-      backbone: ni_lfm_v1_base
-      backbone_checkpoint_path: backbone/checkpoint.pt
-      backbone_cfg: backbone/config.yaml
-      backbone_remove_register_tokens: false
-      backbone_modalities:
-        - nac
-      backbone_patch_size: 8
-      backbone_drop_path_rate_encoder: 0.1
+      backbone: timm_swinv2_base_window16_256.ms_in1k
+      backbone_pretrained: true
+      backbone_in_chans: 1
+      backbone_img_size: 256
+      backbone_out_indices: [0, 1, 2, 3]
+
       necks:
         - name: SelectIndices
-          indices: [2, 5, 8, 11]
-        - name: ReshapeTokensToImage
-          remove_cls_token: false
-          h: 32
-        - name: LearnedInterpolateToPyramidal
-      decoder: UNetDecoder
-      decoder_channels: [512, 256, 128, 64]
+          indices: [0, 1, 2, 3]
+        - name: PermuteDims        # Swin emits NHWC; the decoder needs NCHW
+          new_order: [0, 3, 1, 2]
+
+      decoder: UperNetDecoder
       head_channel_list: [256]
       head_dropout: 0.1
       num_classes: 2
+
     loss: dice
     aux_loss:
       aux_head: 1.0

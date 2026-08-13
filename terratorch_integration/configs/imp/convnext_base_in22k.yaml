@@ -43,16 +43,16 @@ data:
       - 0
       - 0
       - 0
-    train_data_root: <dataset_root>/IMP_dataset/all
-    train_label_data_root: <dataset_root>/IMP_dataset/all
-    val_data_root: <dataset_root>/IMP_dataset/all
-    val_label_data_root: <dataset_root>/IMP_dataset/all
-    test_data_root: <dataset_root>/IMP_dataset/all
-    test_label_data_root: <dataset_root>/IMP_dataset/all
-    predict_data_root: <dataset_root>/IMP_dataset/all
-    train_split: <dataset_root>/IMP_dataset/splits/train.txt
-    val_split: <dataset_root>/IMP_dataset/splits/val.txt
-    test_split: <dataset_root>/IMP_dataset/splits/test.txt
+    train_data_root: data/imp_dataset/all
+    train_label_data_root: data/imp_dataset/all
+    val_data_root: data/imp_dataset/all
+    val_label_data_root: data/imp_dataset/all
+    test_data_root: data/imp_dataset/all
+    test_label_data_root: data/imp_dataset/all
+    predict_data_root: data/imp_dataset/all
+    train_split: data/imp_dataset/train.txt
+    val_split: data/imp_dataset/val.txt
+    test_split: data/imp_dataset/test.txt
     num_classes: 2
     ignore_split_file_extensions: false
     img_grep: "*_img.tif"

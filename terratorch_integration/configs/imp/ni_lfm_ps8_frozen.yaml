@@ -1,9 +1,9 @@
 # Lunar IMP Semantic Segmentation (IMP)
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8
+# Backbone: NASA-IBM Lunar Foundation Model at patch size 8, encoder frozen
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/ni_lfm_ps8.yaml
+#   terratorch fit --config terratorch_integration/configs/imp/ni_lfm_ps8_frozen.yaml
 
 seed_everything: 23
 custom_modules_path: terratorch_integration
@@ -21,14 +21,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/imp
-      name: ni_lfm_ps8
+      name: ni_lfm_ps8_frozen
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/imp/checkpoints/ni_lfm_ps8
+        dirpath: tb_logs/imp/checkpoints/ni_lfm_ps8_frozen
         monitor: val/F1_Score
         mode: max
         filename: best-{epoch:02d}-{val/loss:.3f}
@@ -77,8 +77,8 @@ model:
   class_path: terratorch_integration.LunarSegmentationTask
   init_args:
     backbone_lr: 1e-5
-    head_lr: 1.0e-4
-    layer_decay: 0.75
+    head_lr: 1.0e-3
+    layer_decay: 1.0
     weight_decay: 0.05
     head_weight_decay: 1.0e-3
     warmup_steps: 200
@@ -103,12 +103,12 @@ model:
       decoder: UNetDecoder
       decoder_channels: [512, 256, 128, 64]
       head_channel_list: [256]
-      head_dropout: 0.1
+      head_dropout: 0.0
       num_classes: 2
     loss: dice
     aux_loss:
       aux_head: 1.0
-    freeze_backbone: false
+    freeze_backbone: true
     freeze_decoder: false
     ignore_index: -1
     plot_on_val: 10
