@@ -1,9 +1,9 @@
-# Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
+# Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
 # Backbone: NASA-IBM Lunar Foundation Model at patch size 8 with random initialization
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/wac_final/ni_lfm_ps8_random_init_100pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/ni_lfm_ps8_random_init_50pct.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,14 +20,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: ni_lfm_ps8_random_init_100pct
+      name: ni_lfm_ps8_random_init_50pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/ni_lfm_ps8_random_init_100pct
+        dirpath: tb_logs/wac-crater/checkpoints/ni_lfm_ps8_random_init_50pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -41,9 +41,9 @@ trainer:
 data:
   class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
   init_args:
-    data_dir: <dataset_root>/WAC_Robbins_craters
-    annotations_dir: <dataset_root>/WAC_Robbins_craters
-    train_fraction: 1.0
+    data_dir: data/wac_craters_dataset
+    annotations_dir: data/wac_craters_dataset
+    train_fraction: 0.5
     batch_size: 4
     num_workers: 4
     image_size: 512

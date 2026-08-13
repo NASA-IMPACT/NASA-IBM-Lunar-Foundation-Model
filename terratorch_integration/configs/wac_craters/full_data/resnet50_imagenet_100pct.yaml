@@ -1,9 +1,9 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
-# Backbone: timm ConvNeXt-Base, ImageNet-22k pretrained then 1k fine-tuned
+# Backbone: ImageNet-pretrained ResNet-50 via timm, adapted to 5-band input
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/wac_final/convnext_base_in22k_50pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/resnet50_imagenet_100pct.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,14 +20,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: convnext_base_in22k_50pct
+      name: resnet50_imagenet_100pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/convnext_base_in22k_50pct
+        dirpath: tb_logs/wac-crater/checkpoints/resnet50_imagenet_100pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -41,9 +41,9 @@ trainer:
 data:
   class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
   init_args:
-    data_dir: <dataset_root>/WAC_Robbins_craters
-    annotations_dir: <dataset_root>/WAC_Robbins_craters
-    train_fraction: 0.5
+    data_dir: data/wac_craters_dataset
+    annotations_dir: data/wac_craters_dataset
+    train_fraction: 1.0
     batch_size: 4
     num_workers: 4
     image_size: 512
@@ -51,7 +51,6 @@ data:
     drop_no_crater_images: true
     wac_norm_means: [0.019855351744561284, 0.02773482313902164, 0.029789978425941957, 0.03144318894931929, 0.03381151791456804]
     wac_norm_stds:  [0.009741310229443915, 0.01323344600455514, 0.01407650071036384, 0.014859192415839976, 0.016153428019436693]
-
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
       init_args:
@@ -64,18 +63,22 @@ model:
     model_factory: ObjectDetectionModelFactory
     model_args:
       framework: faster-rcnn
+      backbone: timm_resnet50        # ImageNet-pretrained
 
-      backbone: timm_convnext_base.fb_in22k_ft_in1k    # ImageNet-pretrained
       backbone_pretrained: true
       backbone_in_chans: 5
-      backbone_out_indices: [0, 1, 2, 3]
+      backbone_features_only: true
+      backbone_out_indices: [1, 2, 3, 4]
 
       num_classes: 2
       framework_min_size: 512
       framework_max_size: 512
 
       in_channels: 5
+
       necks:
+        - name: SelectIndices
+          indices: [0, 1, 2, 3]
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false
@@ -93,12 +96,10 @@ model:
 
     anchor_sizes: [[8], [16], [32], [64]]
     anchor_aspect_ratios: [0.5, 1.0, 2.0]
-
     backbone_lr: 1.0e-4
     head_lr: 1.0e-4
     layer_decay: 1.0
     weight_decay: 1.0e-4
     head_weight_decay: 1.0e-4
     betas: [0.9, 0.999]
-    warmup_steps: 500
-    eta_min: 1.0e-6
+    warmup_steps: 0

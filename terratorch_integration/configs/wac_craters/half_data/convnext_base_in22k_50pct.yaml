@@ -1,9 +1,9 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8 with random initialization
+# Backbone: timm ConvNeXt-Base, ImageNet-22k pretrained then 1k fine-tuned
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/wac_final/ni_lfm_ps8_random_init_50pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/convnext_base_in22k_50pct.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,14 +20,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: ni_lfm_ps8_random_init_50pct
+      name: convnext_base_in22k_50pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/ni_lfm_ps8_random_init_50pct
+        dirpath: tb_logs/wac-crater/checkpoints/convnext_base_in22k_50pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -41,8 +41,8 @@ trainer:
 data:
   class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
   init_args:
-    data_dir: <dataset_root>/WAC_Robbins_craters
-    annotations_dir: <dataset_root>/WAC_Robbins_craters
+    data_dir: data/wac_craters_dataset
+    annotations_dir: data/wac_craters_dataset
     train_fraction: 0.5
     batch_size: 4
     num_workers: 4
@@ -64,29 +64,18 @@ model:
     model_factory: ObjectDetectionModelFactory
     model_args:
       framework: faster-rcnn
-      backbone: ni_lfm_v1_base
-      backbone_cfg: backbone/config.yaml
+
+      backbone: timm_convnext_base.fb_in22k_ft_in1k    # ImageNet-pretrained
+      backbone_pretrained: true
+      backbone_in_chans: 5
+      backbone_out_indices: [0, 1, 2, 3]
 
       num_classes: 2
       framework_min_size: 512
       framework_max_size: 512
 
-      backbone_modalities:
-        - vis
-
-      backbone_patch_size: 8
-      backbone_remove_register_tokens: false
-      backbone_merge_method: concat
-
       in_channels: 5
       necks:
-        - name: SelectIndices
-          indices: [2, 5, 8, 11]
-        - name: ReshapeTokensToImage
-          remove_cls_token: false
-          h: 64
-        - name: MultilayerSimpleFeaturePyramid
-          out_channels: 256
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false
@@ -108,7 +97,7 @@ model:
     backbone_lr: 1.0e-4
     head_lr: 1.0e-4
     layer_decay: 1.0
-    weight_decay: 0.05
+    weight_decay: 1.0e-4
     head_weight_decay: 1.0e-4
     betas: [0.9, 0.999]
     warmup_steps: 500
