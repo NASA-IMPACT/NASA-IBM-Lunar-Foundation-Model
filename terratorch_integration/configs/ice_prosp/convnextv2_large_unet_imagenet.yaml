@@ -1,11 +1,11 @@
 # Ice-prospectivity regression (PROSP)
-# Backbone: timm ConvNeXt-Base, ImageNet-22k pretrained then 1k fine-tuned
+# Backbone: timm ConvNeXt-V2-Large, FCMAE pretrained then 22k/1k fine-tuned
 #
-# Slope, Aspect, DICE, TMAX, LPSR and LPSR_DEN only
+# All modalities, stacked into one 9-channel tensor
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/convnext_base_in22k_m6.yaml
+#   terratorch fit --config terratorch_integration/configs/ice_prosp/convnextv2_large_unet_imagenet.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -25,14 +25,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/ice_prosp
-      name: convnext_base_in22k_m6
+      name: convnextv2_large_unet_imagenet
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: step
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/ice_prosp/checkpoints/convnext_base_in22k_m6
+        dirpath: tb_logs/ice_prosp/checkpoints/convnextv2_large_unet_imagenet
         monitor: val/RMSE
         mode: min
         filename: best-{epoch:02d}-{val\RMSE:.4f}
@@ -48,11 +48,13 @@ data:
     num_workers: 1
     modalities:
       - aspect
-      - slope
+      - CUR
       - DICE
-      - TMAX
       - LPSR
       - LPSR_DEN
+      - LPSR_DIS
+      - slope
+      - TMAX
     train_data_root: data/prospectivity_dataset
     train_label_data_root: data/prospectivity_dataset
     val_data_root: data/prospectivity_dataset
@@ -66,28 +68,34 @@ data:
 
     image_grep:
       aspect: "*_ASP_SIN_COS.tif"
-      slope: "*_SLOPE.tif"
+      CUR: "*_CUR.tif"
       DICE: "*_DICE.tif"
-      TMAX: "*_TMAX.tif"
       LPSR: "*_LPSR.tif"
       LPSR_DEN: "*_LPSR_DEN.tif"
+      LPSR_DIS: "*_LPSR_DIS.tif"
+      slope: "*_SLOPE.tif"
+      TMAX: "*_TMAX.tif"
     label_grep: "*_PRO.tif"
     no_label_replace: -1
     no_data_replace: 0
     means:
-      aspect: [-0.003915, 0.009272]
-      slope: [8.464441]
-      DICE: [0.429733]
-      TMAX: [228.021751]
-      LPSR: [0.062075]
+      aspect:   [-0.003915, 0.009272]
+      CUR:      [0]
+      DICE:     [0.429733]
+      LPSR:     [0.062075]
       LPSR_DEN: [0.062062]
+      LPSR_DIS: [2115.858434]
+      slope:    [8.464441]
+      TMAX:     [228.021751]
     stds:
-      aspect: [0.668003, 0.669717]
-      slope: [6.172140]
-      DICE: [0.454594]
-      TMAX: [47.689147]
-      LPSR: [0.241292]
+      aspect:   [0.668003, 0.669717]
+      CUR:      [0.000280]
+      DICE:     [0.454594]
+      LPSR:     [0.241292]
       LPSR_DEN: [0.195937]
+      LPSR_DIS: [2115.858434]
+      slope:    [6.172140]
+      TMAX:     [47.689147]
     concat_bands: true
     train_transform:
       - class_path: albumentations.D4
@@ -98,25 +106,27 @@ model:
   init_args:
     model_factory: EncoderDecoderFactory
     model_args:
-      backbone: timm_convnext_base.fb_in22k_ft_in1k    # ImageNet-pretrained
+      backbone: timm_convnextv2_large.fcmae_ft_in22k_in1k
       backbone_pretrained: true
-      backbone_in_chans: 7
+      backbone_in_chans: 9          # 8 modalities; aspect is ASP_SIN_COS (2 bands)
       backbone_out_indices: [0, 1, 2, 3]
-
       necks:
         - name: SelectIndices
           indices: [0, 1, 2, 3]
-        - name: FeaturePyramidNetworkNeck
-          out_channel: 256
-          output_ordered_dict: false
-      decoder: SumFuseDeepGNDecoder
-      decoder_upsample_output_size: [256, 256]
+      decoder: UNetDecoder
+      decoder_channels: [512, 256, 128, 64]
+      head_channel_list: [256]
+      head_dropout: 0.1
+      # No num_classes: this is regression, and EncoderDecoderFactory builds a
+      # RegressionHead whose __init__ rejects it.
 
+    # Flat CNN recipe — layer_decay MUST stay 1.0. The LLRD matcher keys off
+    # `.blocks.`, which timm CNNs never emit, so any other value would claim
+    # LLRD while applying none.
     freeze_backbone: false
     freeze_decoder: false
     loss: mse
     ignore_index: -1
-
     backbone_lr: 3.0e-4
     head_lr: 3.0e-4
     layer_decay: 1.0

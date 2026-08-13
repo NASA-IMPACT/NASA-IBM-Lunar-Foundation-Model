@@ -1,11 +1,11 @@
 # Ice-prospectivity regression (PROSP)
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8 
+# Backbone: NASA-IBM Lunar Foundation Model at patch size 8, encoder frozen
 #
-# Slope and Aspect only
+# All modalities
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/ice_prosp/ni_lfm_ps8_m2.yaml
+#   terratorch fit --config terratorch_integration/configs/ice_prosp/ni_lfm_ps8_frozen.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -25,14 +25,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/ice_prosp
-      name: ni_lfm_ps8_m2
+      name: ni_lfm_ps8_frozen
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: step
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/ice_prosp/checkpoints/ni_lfm_ps8_m2
+        dirpath: tb_logs/ice_prosp/checkpoints/ni_lfm_ps8_frozen
         monitor: val/RMSE
         mode: min
         filename: best-{epoch:02d}-{val\RMSE:.4f}
@@ -48,7 +48,13 @@ data:
     num_workers: 1
     modalities:
       - aspect
+      - CUR
+      - DICE
+      - LPSR
+      - LPSR_DEN
+      - LPSR_DIS
       - slope
+      - TMAX
     train_data_root: data/prospectivity_dataset
     train_label_data_root: data/prospectivity_dataset
     val_data_root: data/prospectivity_dataset
@@ -62,16 +68,34 @@ data:
 
     image_grep:
       aspect: "*_ASP_SIN_COS.tif"
+      CUR: "*_CUR.tif"
+      DICE: "*_DICE.tif"
+      LPSR: "*_LPSR.tif"
+      LPSR_DEN: "*_LPSR_DEN.tif"
+      LPSR_DIS: "*_LPSR_DIS.tif"
       slope: "*_SLOPE.tif"
+      TMAX: "*_TMAX.tif"
     label_grep: "*_PRO.tif"
     no_label_replace: -1
     no_data_replace: 0
     means:
-      aspect: [-0.003915, 0.009272]
-      slope:  [8.464441]
+      aspect:   [-0.003915, 0.009272]
+      CUR:      [0]
+      DICE:     [0.429733]
+      LPSR:     [0.062075]
+      LPSR_DEN: [0.062062]
+      LPSR_DIS: [2115.858434]
+      slope:    [8.464441]
+      TMAX:     [228.021751]
     stds:
-      aspect: [0.668003, 0.669717]
-      slope:  [6.172140]
+      aspect:   [0.668003, 0.669717]
+      CUR:      [0.000280]
+      DICE:     [0.454594]
+      LPSR:     [0.241292]
+      LPSR_DEN: [0.195937]
+      LPSR_DIS: [2115.858434]
+      slope:    [6.172140]
+      TMAX:     [47.689147]
     train_transform:
       - class_path: albumentations.D4
       - class_path: albumentations.pytorch.transforms.ToTensorV2
@@ -88,10 +112,70 @@ model:
       backbone_patch_size: 8
       backbone_modalities:
         - aspect
+        - CUR
+        - DICE
+        - LPSR
+        - LPSR_DEN
+        - LPSR_DIS
         - slope
-      backbone_new_modalities: {}
+        - TMAX
+      backbone_new_modalities:
+        CUR:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            CUR: {gsd_m: 100.0}
+        DICE:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            DICE: {gsd_m: 100.0}
+        LPSR:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            LPSR: {gsd_m: 100.0}
+        LPSR_DEN:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            LPSR_DEN: {gsd_m: 100.0}
+        LPSR_DIS:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            LPSR_DIS: {gsd_m: 100.0}
+        TMAX:
+          type: image
+          num_channels: 1
+          data_range: [-1.0, 1.0]
+          patch_size: 8
+          input_size: 256
+          stats:
+            TMAX: {gsd_m: 100.0}
       backbone_merge_method: concat
-
+      backbone_seed_new_modality_from:
+        CUR: slope
+        DICE: slope
+        LPSR: slope
+        LPSR_DEN: slope
+        LPSR_DIS: slope
+        TMAX: slope
       necks:
         - name: SelectIndices
           indices: [2, 5, 8, 11]
@@ -108,7 +192,7 @@ model:
       decoder: SumFuseDeepGNDecoder
       decoder_upsample_output_size: [256, 256]
 
-    freeze_backbone: false
+    freeze_backbone: true
     freeze_decoder: false
     loss: mse
     ignore_index: -1

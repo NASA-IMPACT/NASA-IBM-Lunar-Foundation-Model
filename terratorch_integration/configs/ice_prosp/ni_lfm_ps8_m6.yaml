@@ -15,7 +15,7 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: '32'
-  max_epochs: 600
+  max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 2
   gradient_clip_val: 0.5
@@ -53,16 +53,16 @@ data:
       - TMAX
       - LPSR
       - LPSR_DEN
-    train_data_root: <dataset_root>/ice_prosp
-    train_label_data_root: <dataset_root>/ice_prosp
-    val_data_root: <dataset_root>/ice_prosp
-    val_label_data_root: <dataset_root>/ice_prosp
-    test_data_root: <dataset_root>/ice_prosp
-    test_label_data_root: <dataset_root>/ice_prosp
-    predict_data_root: <dataset_root>/ice_prosp
-    train_split: <dataset_root>/ice_prosp/train_filtered.txt
-    val_split: <dataset_root>/ice_prosp/val_filtered.txt
-    test_split: <dataset_root>/ice_prosp/test_filtered.txt
+    train_data_root: data/prospectivity_dataset
+    train_label_data_root: data/prospectivity_dataset
+    val_data_root: data/prospectivity_dataset
+    val_label_data_root: data/prospectivity_dataset
+    test_data_root: data/prospectivity_dataset
+    test_label_data_root: data/prospectivity_dataset
+    predict_data_root: data/prospectivity_dataset
+    train_split: data/prospectivity_dataset/train_filtered.txt
+    val_split: data/prospectivity_dataset/val_filtered.txt
+    test_split: data/prospectivity_dataset/test_filtered.txt
 
     image_grep:
       aspect: "*_ASP_SIN_COS.tif"
