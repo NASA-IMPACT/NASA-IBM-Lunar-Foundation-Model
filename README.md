@@ -97,7 +97,7 @@ ni-lfm/
 │   │   │   ├── full_data/        #   100% of the train split
 │   │   │   └── half_data/        #   50% of the train split (val/test still full)
 │   │   ├── lro_craters/          # LRO crater detection (grayscale JPGs)
-│   │   ├── imp/                  # Impact Melt Pond segmentation
+│   │   ├── imp/                  # Irregular Mare Patch (IMP) segmentation
 │   │   └── ice_prosp/            # Ice prospectivity
 │   ├── data_adapter.py           # LunarCraterDataModule, LunarNACDTMDataModule, LunarWACCraterDataModule
 │   ├── data_utils.py             # D4DetectionTransform and related augmentations
