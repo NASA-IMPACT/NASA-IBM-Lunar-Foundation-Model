@@ -17,6 +17,8 @@ trainer:
   log_every_n_steps: 5
   gradient_clip_val: 1.0
 
+  deterministic: true
+  benchmark: false
   logger:
     class_path: TensorBoardLogger
     init_args:
@@ -26,6 +28,7 @@ trainer:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: step
+    - class_path: terratorch_integration.DeterministicAugmentation
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/imp/checkpoints/vit_base_mae_imagenet

@@ -22,6 +22,8 @@ trainer:
   gradient_clip_val: 0.5
   gradient_clip_algorithm: norm
   accumulate_grad_batches: 2
+  deterministic: true
+  benchmark: false
   logger:
     class_path: TensorBoardLogger
     init_args:
@@ -31,6 +33,7 @@ trainer:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: step
+    - class_path: terratorch_integration.DeterministicAugmentation
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/ice_prosp/checkpoints/convnext_base_in22k_m5

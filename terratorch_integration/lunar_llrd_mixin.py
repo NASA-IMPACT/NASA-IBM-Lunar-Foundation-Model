@@ -42,6 +42,8 @@ from typing import Any
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
+from .determinism import replace_adaptive_pool
+
 
 _NO_DECAY_TOKENS = (
     "bias",
@@ -234,6 +236,19 @@ class _LunarLLRDMixin:
         # Undo PEFT's freeze of new-modality embedders (see
         # `_fix_frozen_new_modality_embedders_after_peft` docstring).
         _fix_frozen_new_modality_embedders_after_peft(self.model.encoder)
+
+    def setup(self, stage: str) -> None:
+        """Swap in deterministic ops when the run asked for determinism.
+
+        Done here, not in `configure_models`: under LightningCLI the model is
+        built before the Trainer exists, so torch's determinism flag is not set
+        yet at that point. `setup` runs after the Trainer is attached and before
+        `configure_optimizers`, and the replacement holds no parameters, so
+        param groups are unaffected. A no-op unless `deterministic: true`.
+        """
+        super().setup(stage)
+        if torch.are_deterministic_algorithms_enabled():
+            self.model = replace_adaptive_pool(self.model)
 
     def _get_new_modality_names(self) -> list[str]:
         """Modality names that were NOT in the pretrained checkpoint."""
