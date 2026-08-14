@@ -42,3 +42,4 @@ pbs_logs/
 # Symlinks to the shared release bundle (see README)
 /data
 /backbone
+terratorch_integration/RESULTS/
