@@ -34,11 +34,6 @@ trainer:
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
         save_last: true
-    - class_path: EarlyStopping
-      init_args:
-        monitor: val_map
-        mode: max
-        patience: 15
 
 data:
   class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
