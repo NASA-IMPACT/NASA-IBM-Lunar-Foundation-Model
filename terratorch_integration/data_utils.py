@@ -20,10 +20,23 @@ def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
         A float32 array of shape `(H, W)`.  If the stored band is
         `(1, H, W)` (single-band-first convention) the leading singleton
         is squeezed away.
+
+        `uint8` tiles are rescaled from raw DN `[0, 255]` to `[0, 1]` so that
+        every caller sees one photometric convention and the per-dataset
+        `*_norm_mean` / `*_norm_std` constants are always expressed in `[0, 1]`.
+        Float tiles are returned unchanged.
     """
     if Path(path).suffix.lower() == ".npy":
         # Released NAC crater tiles ship as .npy; pretraining tiles are .nc.
-        arr = np.asarray(np.load(path), dtype=np.float32)
+        raw = np.load(path)
+        arr = np.asarray(raw, dtype=np.float32)
+        # DN -> [0, 1].  Gated on uint8 rather than applied unconditionally:
+        # float tiles carry a -9999 nodata sentinel that callers test for
+        # exactly (see LunarNACDTMDataset.NODATA_VALUE), and scaling would
+        # silently break that comparison.  uint8 cannot hold -9999 or NaN,
+        # so scaling it is always safe.
+        if raw.dtype == np.uint8:
+            arr /= 255.0
     else:
         with h5py.File(path, "r") as f:
             arr = np.asarray(f[band_name], dtype=np.float32)
