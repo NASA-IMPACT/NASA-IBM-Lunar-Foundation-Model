@@ -39,6 +39,8 @@ import torch
 import torch.nn as nn
 from lightning.pytorch import Callback
 
+from .deterministic_losses import make_deterministic
+
 
 def seed_albumentations(obj: object, seed: int, _depth: int = 0) -> int:
     """Recursively seed every albumentations transform reachable from *obj*.
@@ -138,3 +140,27 @@ def replace_adaptive_pool(module: nn.Module) -> nn.Module:
     for name, child in list(module.named_children()):
         setattr(module, name, replace_adaptive_pool(child))
     return module
+
+
+class DeterministicLoss(Callback):
+    """Swap ``nn.CrossEntropyLoss`` for a deterministic equivalent.
+
+    ``nll_loss2d_forward_out_cuda_template`` has no deterministic kernel, so a
+    loss containing a ``ce`` term raises under ``deterministic: true``. `ce` is
+    also the only term TerraTorch's ``init_loss`` feeds ``class_weights`` to, so
+    dropping it silently drops class weighting -- which matters on imbalanced
+    masks. This keeps both.
+
+    A callback rather than a task override, so it also covers tasks built by
+    ``SMPModelFactory``, which use TerraTorch's stock SemanticSegmentationTask.
+    A no-op unless torch determinism is on.
+    """
+
+    def setup(self, trainer, pl_module, stage=None) -> None:  # noqa: D102
+        if not torch.are_deterministic_algorithms_enabled():
+            return
+        crit = getattr(pl_module, "criterion", None)
+        if crit is None:
+            return
+        pl_module.criterion = make_deterministic(crit)
+        trainer.print("DeterministicLoss: cross-entropy terms made deterministic")

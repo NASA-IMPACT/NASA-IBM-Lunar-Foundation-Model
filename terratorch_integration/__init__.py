@@ -15,7 +15,7 @@ from .lunar_register import (
 )
 from .necks import LearnedTokenProjection, SimpleFeaturePyramid, MultilayerSimpleFeaturePyramid
 from .decoders import SumFuseDeepGNDecoder
-from .determinism import DeterministicAugmentation, seed_albumentations
+from .determinism import DeterministicAugmentation, DeterministicLoss, seed_albumentations
 from .lunar_object_detection_task import LunarObjectDetectionTask
 from .lunar_segmentation_task import (
     LunarSegmentationTask,
