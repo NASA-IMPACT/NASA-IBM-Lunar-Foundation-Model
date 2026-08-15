@@ -44,11 +44,16 @@ data:
     batch_size: 4
     num_workers: 4
     image_size: 256
-    min_diameter_m: 10.0   # at 1 m/px, discards craters
+    # -1 disables this filter entirely: annotations_min5px.json is already
+    # filtered to diam_px >= 5, and re-filtering here on min(bbox_w, bbox_h)
+    # additionally drops 620 boxes (1.5%), 93% of them craters truncated at a
+    # tile edge whose box is clipped even though the crater is >= 5 px.
+    # Note the name says metres but the comparison is in pixels.
+    min_diameter_m: -1
     drop_no_crater_images: true
     used_for_labeling_only: true
-    nac_norm_mean: 0.02094413563125313
-    nac_norm_std: 0.019197145587676916
+    nac_norm_mean: 0.347012   # train-split stats, [0,1]-scaled tiles (loader maps DN -> [0,1])
+    nac_norm_std: 0.158891
     dtm_global_std: 44.24927615891305
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
