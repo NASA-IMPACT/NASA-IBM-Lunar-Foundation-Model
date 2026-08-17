@@ -11,8 +11,8 @@ For reproducibility, these have to hold:
 
 This module creates:
 - callback to seed albumentations pipelines
-- callback to replace nn.CrossEntropyLoss with a deterministic implementation
 - deterministic implementation for nn.AdaptiveAvgPool2d
+- callback to replace nn.CrossEntropyLoss with a deterministic implementation
 
 """
 
@@ -22,9 +22,9 @@ import os
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from lightning.pytorch import Callback
-
-from .deterministic_losses import make_deterministic
+from lightning.pytorch.utilities import rank_zero_info
 
 
 def seed_albumentations(obj: object, seed: int, _depth: int = 0) -> int:
@@ -121,10 +121,18 @@ def replace_adaptive_pool(module: nn.Module) -> nn.Module:
 
     A no-op for models that contain no adaptive pooling.
     """
+    n = sum(1 for m in module.modules() if isinstance(m, nn.AdaptiveAvgPool2d))
+    module = _replace_adaptive_pool(module)
+    if n:
+        rank_zero_info(f"DeterministicAdaptiveAvgPool2d: replaced {n} pool(s)")
+    return module
+
+
+def _replace_adaptive_pool(module: nn.Module) -> nn.Module:
     if isinstance(module, nn.AdaptiveAvgPool2d):
         return DeterministicAdaptiveAvgPool2d(module.output_size)
     for name, child in list(module.named_children()):
-        setattr(module, name, replace_adaptive_pool(child))
+        setattr(module, name, _replace_adaptive_pool(child))
     return module
 
 
@@ -144,3 +152,57 @@ class DeterministicLoss(Callback):
             return
         pl_module.criterion = make_deterministic(crit)
         trainer.print("DeterministicLoss: cross-entropy terms made deterministic")
+
+
+class DeterministicCrossEntropyLoss(nn.Module):
+    """`nn.CrossEntropyLoss(reduction="mean")` without nondeterministic ops.
+
+    Args:
+        ignore_index: Target value to exclude from the loss and from the
+            normalising denominator.
+        weight: Optional per-class weights, as in `nn.CrossEntropyLoss`.
+    """
+
+    def __init__(self, ignore_index: int | None = -100, weight: torch.Tensor | None = None) -> None:
+        super().__init__()
+        self.ignore_index = -100 if ignore_index is None else int(ignore_index)
+        self.register_buffer("weight", weight if weight is None else weight.clone().float())
+
+    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        num_classes = logits.shape[1]
+        target = target.long()
+        valid = target != self.ignore_index
+        # Clamp ignored positions to a real class so one_hot stays in range;
+        # they are masked out of both numerator and denominator below.
+        safe = torch.where(valid, target, torch.zeros_like(target))
+
+        logp = F.log_softmax(logits, dim=1)
+        onehot = F.one_hot(safe, num_classes)
+        # (B, H, W, C) -> (B, C, H, W); generalises to any spatial rank.
+        dims = (0, safe.dim()) + tuple(range(1, safe.dim()))
+        onehot = onehot.permute(*dims).to(logp.dtype)
+
+        nll = -(logp * onehot).sum(dim=1)
+
+        if self.weight is not None:
+            w = self.weight.to(logits.dtype)[safe]
+            nll = nll * w
+            denom = (w * valid).sum()
+        else:
+            denom = valid.sum().to(nll.dtype)
+
+        nll = nll * valid
+        return nll.sum() / denom.clamp_min(1)
+
+
+def make_deterministic(module: nn.Module) -> nn.Module:
+    """Recursively swap every `nn.CrossEntropyLoss` for the deterministic one.
+
+    Returns the replacement when *module* is itself a CrossEntropyLoss, so
+    callers can use the return value rather than relying on mutation.
+    """
+    if isinstance(module, nn.CrossEntropyLoss):
+        return DeterministicCrossEntropyLoss(ignore_index=module.ignore_index, weight=module.weight)
+    for name, child in list(module.named_children()):
+        setattr(module, name, make_deterministic(child))
+    return module
