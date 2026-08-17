@@ -52,7 +52,7 @@ Single-value overrides also work, e.g.
 Every YAML under [`terratorch_integration/configs/`](terratorch_integration/configs/) is a runnable `terratorch fit` target:
 
 ```bash
-PYTHONPATH=. terratorch fit -c terratorch_integration/configs/nac_craters/crater_detection_nac_dtm_meta.yaml
+PYTHONPATH=. terratorch fit -c terratorch_integration/configs/nac_craters/ni_lfm_ps8.yaml
 ```
 
 Common overrides:
@@ -78,9 +78,9 @@ Note: `terratorch fit` writes `config.yaml`/`config_deploy.yaml` to CWD by defau
 PYTHONPATH=. terratorch test --config <config_from_finetuning>.yaml --ckpt_path <finetuned_model>.ckpt
 ```
 
-## Cluster / PBS
+## Cluster (PBS / SLURM)
 
-An example PBS wrapper for NASA-cluster batch submission lives at [`examples/pbs/run_finetuning.pbs`](examples/pbs/run_finetuning.pbs). Edit `CFG_PATH`, `#PBS -W group_list`, and the conda env activation to match your site.
+Example batch wrappers for cluster submission live at [`examples/pbs/run_finetuning.pbs`](examples/pbs/run_finetuning.pbs) (PBS) and [`examples/slurm/run_finetuning.sbatch`](examples/slurm/run_finetuning.sbatch) (SLURM). Edit `CFG_PATH`, the scheduler directives (`#PBS -W group_list` / `#SBATCH --account`, etc.), and the conda env activation to match your site.
 
 ## Repo layout
 
@@ -88,6 +88,7 @@ An example PBS wrapper for NASA-cluster batch submission lives at [`examples/pbs
 ni_lfm/
 ├── ni_lfm/                       # model package (backbone, tokenizers, data utils)
 ├── terratorch_integration/       # TerraTorch datamodules + tasks + configs
+│   ├── README.md                 # package-level docs (backbones, tasks, determinism)
 │   ├── configs/                  # runnable `terratorch fit` configs, grouped by task
 │   │   ├── nac_craters/          # NAC crater detection
 │   │   ├── wac_craters/          # WAC crater detection
@@ -105,9 +106,13 @@ ni_lfm/
 │   ├── lunar_regression_task.py
 │   ├── lunar_llrd_mixin.py       # layer-wise LR decay + split-group optimiser mixin
 │   ├── lunar_register.py         # registers backbone variants with TerraTorch
+│   ├── determinism.py            # deterministic drop-ins + Albumentations seeding callbacks
 │   ├── necks.py                  # LearnedTokenProjection, SimpleFeaturePyramid, MultilayerSimpleFeaturePyramid
 │   └── decoders.py               # SumFuseDeepGNDecoder
-├── examples/pbs/                 # cluster batch scripts
+├── examples/
+│   ├── pbs/                      # PBS batch scripts
+│   ├── slurm/                    # SLURM batch scripts
+├── README.md                     # this file
 ├── LICENSE                       # Apache-2.0
 ├── pyproject.toml
 └── requirements.txt
