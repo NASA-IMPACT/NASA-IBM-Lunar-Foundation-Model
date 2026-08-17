@@ -1,9 +1,9 @@
-# Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
-# Backbone: timm CAFormer-B36, ImageNet-22k pretrained then 1k fine-tuned
+# Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
+# Backbone: timm Swin-V2-Base (window 16, 256px), ImageNet-1k pretrained
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/caformer_b36_imagenet_50pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/swinv2_base_imagenet.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,14 +20,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: caformer_b36_imagenet_50pct
+      name: swinv2_base_imagenet_100pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/caformer_b36_imagenet_50pct
+        dirpath: tb_logs/wac-crater/checkpoints/swinv2_base_imagenet_100pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -38,7 +38,7 @@ data:
   init_args:
     data_dir: data/wac_craters_dataset
     annotations_dir: data/wac_craters_dataset
-    train_fraction: 0.5
+    train_fraction: 1.0
     batch_size: 4
     num_workers: 4
     image_size: 512
@@ -60,10 +60,11 @@ model:
     model_args:
       framework: faster-rcnn
 
-      backbone: timm_caformer_b36.sail_in22k_ft_in1k
+      backbone: timm_swinv2_base_window16_256.ms_in1k
       backbone_pretrained: true
       backbone_in_chans: 5
       backbone_features_only: true
+      backbone_img_size: 512
       backbone_out_indices: [0, 1, 2, 3]
 
       num_classes: 2
@@ -74,6 +75,8 @@ model:
       necks:
         - name: SelectIndices
           indices: [0, 1, 2, 3]
+        - name: PermuteDims        # Swin emits NHWC; the FPN needs NCHW
+          new_order: [0, 3, 1, 2]
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false

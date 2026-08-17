@@ -1,9 +1,9 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
-# Backbone: timm ConvNeXt-V2-Base, FCMAE pretrained then 22k/1k fine-tuned
+# Backbone: timm ConvNeXt-Base, ImageNet-22k pretrained then 1k fine-tuned
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/convnextv2_base_in22k_100pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/convnext_base_in22k.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,14 +20,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: convnextv2_base_in22k_100pct
+      name: convnext_base_in22k_100pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/convnextv2_base_in22k_100pct
+        dirpath: tb_logs/wac-crater/checkpoints/convnext_base_in22k_100pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -60,10 +60,9 @@ model:
     model_args:
       framework: faster-rcnn
 
-      backbone: timm_convnextv2_base.fcmae_ft_in22k_in1k
+      backbone: timm_convnext_base.fb_in22k_ft_in1k    # ImageNet-pretrained
       backbone_pretrained: true
       backbone_in_chans: 5
-      backbone_features_only: true
       backbone_out_indices: [0, 1, 2, 3]
 
       num_classes: 2
@@ -72,8 +71,6 @@ model:
 
       in_channels: 5
       necks:
-        - name: SelectIndices
-          indices: [0, 1, 2, 3]
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false

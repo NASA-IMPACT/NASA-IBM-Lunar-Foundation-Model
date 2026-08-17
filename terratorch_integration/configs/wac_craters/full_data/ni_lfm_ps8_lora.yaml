@@ -1,14 +1,11 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
-# Backbone: NASA-IBM Lunar Foundation Model at patch size 8, randomly initialized (no pretraining), LoRA PEFT variant
+# Backbone: NASA-IBM Lunar Foundation Model at patch size 8,  LoRA PEFT variant
 #
 # Requires: pip install terratorch[peft]
 #
-# Matched random twin of ni_lfm_ps8_lora: identical LoRA adapters and budget,
-# no pretrained weights. The gap between the two is the pretraining effect.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/ni_lfm_ps8_lora_random_init_100pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/ni_lfm_ps8_lora.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -25,14 +22,14 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: ni_lfm_ps8_lora_random_init_100pct
+      name: ni_lfm_ps8_lora_100pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/ni_lfm_ps8_lora_random_init_100pct
+        dirpath: tb_logs/wac-crater/checkpoints/ni_lfm_ps8_lora_100pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
@@ -64,6 +61,7 @@ model:
     model_args:
       framework: faster-rcnn
       backbone: ni_lfm_v1_base
+      backbone_checkpoint_path: backbone/checkpoint.pt
       backbone_cfg: backbone/config.yaml
 
       num_classes: 2
