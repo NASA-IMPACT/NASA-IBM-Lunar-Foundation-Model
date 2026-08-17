@@ -1,8 +1,6 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
 # Backbone: timm DaViT-Base, ImageNet-1k pretrained
 #
-# Only the train split is reduced; val and test always load in full.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
 #   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/davit_base_imagenet_100pct.yaml

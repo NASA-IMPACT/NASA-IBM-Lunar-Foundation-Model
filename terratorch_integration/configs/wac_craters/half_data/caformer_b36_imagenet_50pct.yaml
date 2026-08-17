@@ -1,8 +1,6 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
 # Backbone: timm CAFormer-B36, ImageNet-22k pretrained then 1k fine-tuned
 #
-# Only the train split is reduced; val and test always load in full.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
 #   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/caformer_b36_imagenet_50pct.yaml

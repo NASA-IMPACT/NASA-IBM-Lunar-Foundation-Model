@@ -5,7 +5,7 @@
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/convnext_base_in22k_m2.yaml
+#   terratorch fit --config terratorch_integration/configs/ice_prosp/convnext_base_in22k_m2.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -14,7 +14,7 @@ out_dtype: float32
 trainer:
   accelerator: gpu
   devices: 1
-  precision: '32'
+  precision: "32"
   max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 2
@@ -46,7 +46,7 @@ trainer:
 data:
   class_path: terratorch.datamodules.GenericMultiModalDataModule
   init_args:
-    task: 'regression'
+    task: "regression"
     batch_size: 4
     num_workers: 1
     modalities:

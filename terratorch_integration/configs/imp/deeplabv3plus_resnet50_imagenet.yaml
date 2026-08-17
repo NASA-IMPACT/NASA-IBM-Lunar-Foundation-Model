@@ -77,10 +77,7 @@ data:
       - class_path: albumentations.pytorch.transforms.ToTensorV2
 
 model:
-  # Stock TerraTorch task, not terratorch_integration.LunarSegmentationTask:
-  # SMPModelFactory returns an SMPModelWrapper that owns encoder+decoder as one
-  # unit and exposes no `.encoder`, which the LLRD mixin dereferences. These are
-  # flat-LR baselines (layer_decay would be 1.0 anyway), so no LLRD is lost.
+  # Using TerraTorch task to better integrate with SMPModelFactory
   class_path: terratorch.tasks.SemanticSegmentationTask
   init_args:
     lr: 1.0e-4

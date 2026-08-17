@@ -1,8 +1,6 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
 # Backbone: timm ConvNeXt-V2-Base, FCMAE pretrained then 22k/1k fine-tuned
 #
-# Only the train split is reduced; val and test always load in full.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
 #   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/convnextv2_base_in22k_50pct.yaml

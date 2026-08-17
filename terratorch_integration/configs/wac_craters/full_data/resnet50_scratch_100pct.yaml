@@ -1,8 +1,6 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
 # Backbone: timm ResNet-50, randomly initialized (no pretraining)
 #
-# Only the train split is reduced; val and test always load in full.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
 #   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/resnet50_scratch_100pct.yaml

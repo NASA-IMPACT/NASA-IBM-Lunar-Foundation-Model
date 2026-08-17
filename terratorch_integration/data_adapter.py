@@ -29,7 +29,7 @@ from skimage import measure
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from terratorch_integration.data_utils import load_nc_band as _load_nc_band
+from terratorch_integration.data_utils import load_data_band as _load_data_band
 
 
 class Normalize:
@@ -1164,8 +1164,8 @@ class LunarNACDTMDataset(Dataset):
                     continue  # no COCO entry or all below diameter threshold
 
                 # Load the actual files to build the nodata mask and test each bbox
-                _nac = _load_nc_band(s["pho_path"]) if self.use_nac else None
-                _dtm = _load_nc_band(s["dtm_path"]) if self.use_dtm else None
+                _nac = _load_data_band(s["pho_path"]) if self.use_nac else None
+                _dtm = _load_data_band(s["dtm_path"]) if self.use_dtm else None
                 ref = _nac if _nac is not None else _dtm
                 _h, _w = ref.shape
                 inv = np.zeros((_h, _w), dtype=bool)
@@ -1207,10 +1207,10 @@ class LunarNACDTMDataset(Dataset):
         dtm_np: np.ndarray | None = None
         orig_h = orig_w = 0
         if self.use_nac:
-            nac_np = _load_nc_band(sample_info["pho_path"])
+            nac_np = _load_data_band(sample_info["pho_path"])
             orig_h, orig_w = nac_np.shape
         if self.use_dtm:
-            dtm_np = _load_nc_band(sample_info["dtm_path"])
+            dtm_np = _load_data_band(sample_info["dtm_path"])
             if nac_np is None:
                 orig_h, orig_w = dtm_np.shape
 

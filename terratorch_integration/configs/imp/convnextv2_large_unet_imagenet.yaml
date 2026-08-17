@@ -77,7 +77,7 @@ data:
 model:
   class_path: terratorch_integration.LunarSegmentationTask
   init_args:
-    # Flat CNN recipe — do NOT enable LLRD (unfair baseline tuning).
+    # Flat CNN recipe.
     backbone_lr: 1.0e-4
     head_lr: 1.0e-4
     layer_decay: 1.0

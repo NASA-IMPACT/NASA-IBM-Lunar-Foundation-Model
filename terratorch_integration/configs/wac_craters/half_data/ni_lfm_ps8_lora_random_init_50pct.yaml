@@ -3,9 +3,6 @@
 #
 # Requires: pip install terratorch[peft]
 #
-# Matched random twin of ni_lfm_ps8_lora: identical LoRA adapters and budget,
-# no pretrained weights. The gap between the two is the pretraining effect.
-#
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
 #   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/ni_lfm_ps8_lora_random_init_50pct.yaml

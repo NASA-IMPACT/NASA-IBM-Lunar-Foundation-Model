@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 
-def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
+def load_data_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
     """Load a single band from a NetCDF4/HDF5 `.nc` or NumPy `.npy` tile as a 2-D array.
 
     Args:
@@ -22,7 +22,6 @@ def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
         is squeezed away.
     """
     if Path(path).suffix.lower() == ".npy":
-        # Released NAC crater tiles ship as .npy; pretraining tiles are .nc.
         arr = np.asarray(np.load(path), dtype=np.float32)
     else:
         with h5py.File(path, "r") as f:

@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ni-lfm"
+name = "ni_lfm"
 version = "0.1.0"
-description = "NI-LFM: NASA-IBM Lunar Foundation Model — pretraining, finetuning and inference release"
+description = "NASA-IBM Lunar Foundation Model — fine-tuning and inference"
 requires-python = ">=3.11,<3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 dynamic = ["dependencies"]
@@ -23,7 +23,7 @@ where = ["."]
 include = ["ni_lfm*", "terratorch_integration*"]
 
 [tool.setuptools.package-data]
-# The finetuning recipes and the trained text tokenizer are data, not code, so
+# The fine-tuning recipes and the trained text tokenizer are data, not code, so
 # they have to be declared here or they vanish from an installed wheel.
 terratorch_integration = ["configs/**/*.yaml"]
 ni_lfm = [

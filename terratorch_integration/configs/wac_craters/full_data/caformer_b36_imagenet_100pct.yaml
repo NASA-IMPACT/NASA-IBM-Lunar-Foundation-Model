@@ -1,7 +1,6 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
 # Backbone: timm CAFormer-B36, ImageNet-22k pretrained then 1k fine-tuned
-#
-# Only the train split is reduced; val and test always load in full.
+
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \

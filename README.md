@@ -1,6 +1,6 @@
 # NASA-IBM Lunar-FM
 
-Finetuning and inference release of the Graha Lunar-FM foundation model. Two Python packages:
+Finetuning and inference release of the NASA-IBM Lunar Foundation Model foundation model. Two Python packages:
 
 - [`ni_lfm/`](ni_lfm/) — the model package (backbone, tokenizers, data utilities). Vendored; not edited in day-to-day work.
 - [`terratorch_integration/`](terratorch_integration/) — TerraTorch-compatible datamodules, tasks, backbone wrappers, and runnable configs for lunar downstream tasks (crater detection, IMP segmentation, ice prospectivity, etc.). This is the working surface.
@@ -11,11 +11,11 @@ Pretraining code is not included.
 
 ```bash
 pyenv install -s 3.12.2
-pyenv virtualenv 3.12.2 graha-lunar-fm && pyenv activate graha-lunar-fm
+pyenv virtualenv 3.12.2 ni_lfm && pyenv activate ni_lfm
 pip install -e .
 ```
 
-(or `conda create -n graha-lunar-fm python=3.12` if you prefer conda.)
+(or `conda create -n ni_lfm python=3.12` if you prefer conda.)
 
 ## Weights and data
 
@@ -23,7 +23,7 @@ Configs use two relative roots, `data/` and `backbone/`, so no absolute paths ar
 baked into any YAML. Point them at the shared release bundle with two symlinks:
 
 ```bash
-B=/nobackupnfs1/sroy14/processed_data/Lunar/release_ni_lfm
+B=<path_to_your_dir_containing_data_and_weights>
 ln -sfn "$B/downstream_dataset"   data
 ln -sfn "$B/checkpoints/backbone" backbone
 ```
@@ -42,15 +42,12 @@ data/wac_craters_dataset/              # wac_craters/  (images_tiff/, metadata.p
 **`backbone_cfg` is required** for `ni_lfm_v1_*` backbones — the wrapper raises
 `ValueError` if missing.
 
-To run against a different copy, re-point the symlinks rather than editing YAML.
+To run against a different copy, you can either change the config path or re-point the symlinks.
 Single-value overrides also work, e.g.
 `--model.init_args.model_args.backbone_checkpoint_path /other/checkpoint.pt`.
 
-> **`lro_craters/` has no data in this bundle.** Its 6 configs still carry
-> `<dataset_root>` placeholders; point `--data.root` at an LRO crater dataset to
-> run them.
 
-## Finetuning
+## Fine-tuning
 
 Every YAML under [`terratorch_integration/configs/`](terratorch_integration/configs/) is a runnable `terratorch fit` target:
 
@@ -88,7 +85,7 @@ An example PBS wrapper for NASA-cluster batch submission lives at [`examples/pbs
 ## Repo layout
 
 ```
-ni-lfm/
+ni_lfm/
 ├── ni_lfm/                       # model package (backbone, tokenizers, data utils)
 ├── terratorch_integration/       # TerraTorch datamodules + tasks + configs
 │   ├── configs/                  # runnable `terratorch fit` configs, grouped by task
