@@ -130,13 +130,13 @@ model:
 
     freeze_backbone: false
     freeze_decoder: false
-    loss: mse
+    loss: huber
     ignore_index: -1
-    backbone_lr: 1.5e-4
+    backbone_lr: 3.0e-4
     head_lr: 3.0e-4
-    layer_decay: 0.75
+    layer_decay: 0.85
     weight_decay: 0.05
     head_weight_decay: 0.05
-    betas: [0.9, 0.999]
+    betas: [0.9, 0.98]
     warmup_steps: 130
     eta_min: 1.0e-6

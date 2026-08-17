@@ -14,7 +14,7 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: "32"
-  max_epochs: 100
+  max_epochs: 600
   check_val_every_n_epoch: 1
   log_every_n_steps: 5
   gradient_clip_val: 1.0
@@ -30,6 +30,7 @@ trainer:
       init_args:
         logging_interval: step
     - class_path: terratorch_integration.DeterministicAugmentation
+    - class_path: terratorch_integration.DeterministicLoss
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/imp/checkpoints/unet_resnet34_scratch
@@ -41,7 +42,7 @@ trainer:
 data:
   class_path: terratorch.datamodules.GenericNonGeoSegmentationDataModule
   init_args:
-    batch_size: 8
+    batch_size: 32
     num_workers: 1
     rgb_indices:
       - 0
@@ -64,9 +65,9 @@ data:
     no_label_replace: -1
     no_data_replace: 0
     means:
-      - 0.029947
+      - 0.027375
     stds:
-      - 0.016554
+      - 0.014783
     train_transform:
       - class_path: albumentations.D4
       - class_path: albumentations.RandomBrightnessContrast
@@ -94,8 +95,12 @@ model:
       num_classes: 2
 
     # No aux_loss: SMP builds encoder+decoder as one unit with no aux head.
-    loss: dice
+    loss:
+      dice: 1.0
+      ce: 0.25
+      lovasz: 0.5
+    class_weights: [0.1, 0.9]
     freeze_backbone: false
     freeze_decoder: false
     ignore_index: -1
-    plot_on_val: 10
+    plot_on_val: 5
