@@ -3,12 +3,17 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "graha-lunar-fm"
+name = "ni_lfm"
 version = "0.1.0"
-description = "Graha Lunar-FM: finetuning and inference release"
+description = "NASA-IBM Lunar Foundation Model — fine-tuning and inference"
 requires-python = ">=3.11,<3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+# Experiment tracking. The shipped configs log to TensorBoard so they run with
+# no account; install this extra to switch a run over to Weights & Biases.
+wandb = ["wandb>=0.17"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
@@ -16,3 +21,17 @@ dependencies = {file = ["requirements.txt"]}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ni_lfm*", "terratorch_integration*"]
+
+[tool.setuptools.package-data]
+# The fine-tuning recipes and the trained text tokenizer are data, not code, so
+# they have to be declared here or they vanish from an installed wheel.
+terratorch_integration = ["configs/**/*.yaml"]
+ni_lfm = [
+    "utils/tokenizer/*.txt",
+    "utils/tokenizer/trained/*",
+]
+
+[tool.uv]
+# Build the project itself as an editable install so edits to configs and
+# custom modules take effect without reinstalling.
+package = true

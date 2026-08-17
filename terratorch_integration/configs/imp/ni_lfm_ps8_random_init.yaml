@@ -12,11 +12,13 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: "32"
-  max_epochs: 100
+  max_epochs: 600
   check_val_every_n_epoch: 1
   log_every_n_steps: 5
   gradient_clip_val: 1.0
 
+  deterministic: true
+  benchmark: false
   logger:
     class_path: TensorBoardLogger
     init_args:
@@ -26,6 +28,8 @@ trainer:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
+    - class_path: terratorch_integration.DeterministicAugmentation
+    - class_path: terratorch_integration.DeterministicLoss
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/imp/checkpoints/ni_lfm_ps8_random_init
@@ -37,22 +41,22 @@ trainer:
 data:
   class_path: terratorch.datamodules.GenericNonGeoSegmentationDataModule
   init_args:
-    batch_size: 8
+    batch_size: 32
     num_workers: 1
     rgb_indices:
       - 0
       - 0
       - 0
-    train_data_root: <dataset_root>/IMP_dataset/all
-    train_label_data_root: <dataset_root>/IMP_dataset/all
-    val_data_root: <dataset_root>/IMP_dataset/all
-    val_label_data_root: <dataset_root>/IMP_dataset/all
-    test_data_root: <dataset_root>/IMP_dataset/all
-    test_label_data_root: <dataset_root>/IMP_dataset/all
-    predict_data_root: <dataset_root>/IMP_dataset/all
-    train_split: <dataset_root>/IMP_dataset/splits/train.txt
-    val_split: <dataset_root>/IMP_dataset/splits/val.txt
-    test_split: <dataset_root>/IMP_dataset/splits/test.txt
+    train_data_root: data/imp_dataset/all
+    train_label_data_root: data/imp_dataset/all
+    val_data_root: data/imp_dataset/all
+    val_label_data_root: data/imp_dataset/all
+    test_data_root: data/imp_dataset/all
+    test_label_data_root: data/imp_dataset/all
+    predict_data_root: data/imp_dataset/all
+    train_split: data/imp_dataset/train.txt
+    val_split: data/imp_dataset/val.txt
+    test_split: data/imp_dataset/test.txt
     num_classes: 2
     ignore_split_file_extensions: false
     img_grep: "*_img.tif"
@@ -60,9 +64,9 @@ data:
     no_label_replace: -1
     no_data_replace: 0
     means:
-      - 0.029947
+      - 0.027375
     stds:
-      - 0.016554
+      - 0.014783
     train_transform:
       - class_path: albumentations.D4
       - class_path: albumentations.RandomBrightnessContrast
@@ -90,24 +94,29 @@ model:
         - name: ReshapeTokensToImage
           remove_cls_token: false
           h: 32
-        - name: LearnedInterpolateToPyramidal
+        - name: MultilayerSimpleFeaturePyramid
+          out_channels: 512
       decoder: UNetDecoder
       decoder_channels: [512, 256, 128, 64]
       head_channel_list: [256]
       head_dropout: 0.1
       num_classes: 2
-    loss: dice
+    loss:
+      dice: 1.0
+      ce: 0.25
+      lovasz: 0.5
+    class_weights: [0.1, 0.9]
     class_weights: [0.1, 0.9]
     aux_loss:
       aux_head: 1.0
     freeze_backbone: false
     freeze_decoder: false
     ignore_index: -1
-    plot_on_val: 10
+    plot_on_val: 5
 
     backbone_lr: 1.0e-4
-    head_lr: 1.0e-4
-    layer_decay: 1.0
+    head_lr: 3.0e-4
+    layer_decay: 0.85
     weight_decay: 0.05
     warmup_steps: 500
     eta_min: 1.0e-6

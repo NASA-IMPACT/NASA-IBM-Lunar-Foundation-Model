@@ -8,21 +8,27 @@ import numpy as np
 import torch
 
 
-def load_nc_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
-    """Load a single band from a NetCDF4/HDF5 `.nc` file as a 2-D array.
+def load_data_band(path: str | Path, band_name: str = "band_data") -> np.ndarray:
+    """Load a single band from a NetCDF4/HDF5 `.nc` or NumPy `.npy` tile as a 2D array.
+       `uint8` npy files are rescaled from `[0, 255]` to `[0, 1]`.
 
     Args:
-        path: Path to the `.nc` file.
+        path: Path to the `.nc` / `.npy` file (`band_name` is ignored for `.npy`).
         band_name: HDF5 dataset key to read (e.g. `"band_data"` for the
             NAC/DTM tiles, `"data"` for the IMP segmentation tiles).
 
     Returns:
-        A float32 array of shape `(H, W)`.  If the stored band is
-        `(1, H, W)` (single-band-first convention) the leading singleton
-        is squeezed away.
+        A float32 array of shape `(H, W)`. If the stored band is `(1, H, W)`
+        (single-band-first convention) the leading singleton is squeezed away.
     """
-    with h5py.File(path, "r") as f:
-        arr = np.asarray(f[band_name], dtype=np.float32)
+    if Path(path).suffix.lower() == ".npy":
+        raw = np.load(path)
+        arr = np.asarray(raw, dtype=np.float32)
+        if raw.dtype == np.uint8:
+            arr /= 255.0
+    else:
+        with h5py.File(path, "r") as f:
+            arr = np.asarray(f[band_name], dtype=np.float32)
     if arr.ndim == 3 and arr.shape[0] == 1:
         arr = arr[0]
     return arr
@@ -209,9 +215,7 @@ class D4DetectionTransform:
         if size is None:
             return sample  # nothing spatial to transform
 
-        # ------------------------------------------------------------------
         # Rotate / flip every present image tensor
-        # ------------------------------------------------------------------
         for key in self.image_keys:
             t = sample.get(key)
             if isinstance(t, torch.Tensor):

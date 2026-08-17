@@ -32,3 +32,14 @@ outputs/
 logs/
 wandb/
 lightning_logs/
+
+# Local build/test env (uv cache, HF/timm weights)
+.cache/
+
+# PBS job logs / smoke-test output
+pbs_logs/
+
+# Symlinks to the shared release bundle (see README)
+/data
+/backbone
+terratorch_integration/RESULTS/

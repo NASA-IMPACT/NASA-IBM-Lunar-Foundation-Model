@@ -34,11 +34,6 @@ trainer:
         mode: max
         filename: best-{epoch:02d}-{val_bbox_map:.3f}
         save_last: true
-    - class_path: EarlyStopping
-      init_args:
-        monitor: val_bbox_map
-        mode: max
-        patience: 15
 
 data:
   class_path: terratorch_integration.data_adapter.LunarCraterDataModule
@@ -65,8 +60,8 @@ model:
     model_args:
       framework: mask-rcnn
       backbone: ni_lfm_v1_base
-      backbone_checkpoint_path: weights/backbone/checkpoint.pt
-      backbone_cfg: weights/backbone/config.yaml
+      backbone_checkpoint_path: backbone/checkpoint.pt
+      backbone_cfg: backbone/config.yaml
       num_classes: 2
       framework_min_size: 512
       framework_max_size: 512

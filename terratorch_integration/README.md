@@ -112,6 +112,26 @@ model:
     warmup_steps: 500
 ```
 
+## Reproducibility
+
+We added some features to make our examples reproducible. Set `trainer.deterministic: true` and add the callbacks as needed; the tasks handle the rest.
+
+```yaml
+trainer:
+  deterministic: true
+  benchmark: false
+  callbacks:
+    - class_path: terratorch_integration.DeterministicAugmentation
+    - class_path: terratorch_integration.DeterministicLoss
+```
+
+- **`DeterministicAugmentation`** — seeds every Albumentations `Compose` reachable from the datamodule (`lightning.seed_everything` does not reach Albumentations ≥ 2.0). Defaults to `PL_GLOBAL_SEED`.
+- **`DeterministicLoss`** — swaps `nn.CrossEntropyLoss` for a numerically-identical build from deterministic ops (`nll_loss2d_forward_out_cuda_template` has no deterministic CUDA kernel). A no-op when `deterministic: false`.
+- **Adaptive pooling** — `_LunarLLRDMixin.setup()` replaces every `nn.AdaptiveAvgPool2d` (e.g. `UperNetDecoder`'s pyramid pool, whose backward is nondeterministic) with a slice-and-mean drop-in. Automatic; no config needed.
+
+
+See [determinism.py](determinism.py) for details.
+
 ## Crater detection datamodules
 
 Two flavours ship:

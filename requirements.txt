@@ -8,19 +8,19 @@ timm>=1.0.27,<2
 einops>=0.8.2,<0.9
 numpy>=2.4.4,<3
 
-# Imported directly by this repo but previously declared only transitively.
-# omegaconf was the fragile one: its sole provider was hydra-core, which nothing
-# in this repo otherwise uses.
-omegaconf>=2.3.0,<3          # terratorch_integration/lunar_backbone.py, ni_lfm/data/*
-pillow>=12.2.0,<13           # PIL.Image in both datamodules
-rasterio>=1.5.0,<2           # terratorch_integration/data_adapter.py
-torchgeo>=0.9.0,<0.10        # terratorch_integration/lunar_object_detection_task.py
+omegaconf>=2.3.0,<3
+pillow>=12.2.0,<13
+rasterio>=1.5.0,<2
+torchgeo>=0.9.0,<0.10
+albumentations>=2.0,<3
+segmentation-models-pytorch>=0.4,<0.6
+tensorboard>=2.18,<3
 
 # --- data I/O ---
-h5py>=3.16.0,<4              # .nc / HDF5 patch reads
-hdf5plugin>=6.0.0,<7         # registers bitshuffle / blosc / lz4 / zstd filters
+h5py>=3.16.0,<4
+hdf5plugin>=6.0.0,<7
 pandas>=3.0.3,<4
-pyarrow>=24.0.0,<25          # engine for pd.read_parquet on the metadata files
+pyarrow>=24.0.0,<25
 
 # --- tokenizer / VQ stack (ni_lfm) ---
 diffusers>=0.38.0,<0.39
@@ -29,8 +29,7 @@ vector-quantize-pytorch>=1.29.0,<2
 huggingface-hub>=1.15.0,<2
 
 # --- misc ---
-peft>=0.19.1,<0.20           # no direct import: reached through terratorch's
-                             # get_peft_backbone by the 5 LoRA configs
+peft>=0.19.1,<0.20
 scipy>=1.17.1,<2
 scikit-image>=0.26.0,<0.27
 matplotlib>=3.10.9,<4

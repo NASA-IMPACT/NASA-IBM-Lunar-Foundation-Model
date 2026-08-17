@@ -12,7 +12,7 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: "32"
-  max_epochs: 50
+  max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 10
   enable_checkpointing: true
@@ -37,19 +37,20 @@ trainer:
 data:
   class_path: terratorch_integration.data_adapter.LunarNACDTMDataModule
   init_args:
-    data_dir: <dataset_root>/NAC_craters
-    metadata_file: <dataset_root>/NAC_craters/metadata.parquet
-    annotations_file: <dataset_root>/NAC_craters/nac_handlabeled_annotations.json
+    data_dir: data/nac_craters_dataset
+    metadata_file: null   # tile paths and splits come from the COCO file below
+    annotations_file: data/nac_craters_dataset/annotations_min5px.json
     modalities: [nac]
+    metadata_tokenizer_path: ni_lfm/utils/tokenizer/trained/text_tokenizer.json
     output_mode: packed
     batch_size: 4
     num_workers: 4
     image_size: 256
-    min_diameter_m: 10.0   # at 1 m/px, discards craters
+    min_diameter_m: -1    # -1 disables this filter
     drop_no_crater_images: true
     used_for_labeling_only: true
-    nac_norm_mean: 0.02094413563125313
-    nac_norm_std: 0.019197145587676916
+    nac_norm_mean: 0.347012   # train-split stats, [0,1]-scaled tiles (loader maps DN -> [0,1])
+    nac_norm_std: 0.158891
     dtm_global_std: 44.24927615891305
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform

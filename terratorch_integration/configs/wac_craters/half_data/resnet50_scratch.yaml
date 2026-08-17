@@ -1,9 +1,9 @@
 # Lunar Crater Detection (LRO WAC, 5-band vis) — 50% training data
-# Backbone: timm ViT-Base/16, MAE self-supervised on ImageNet-1k
+# Backbone: timm ResNet-50, randomly initialized (no pretraining)
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/wac_craters/wac_final/vit_base_mae_imagenet_50pct.yaml
+#   terratorch fit --config terratorch_integration/configs/wac_craters/half_data/resnet50_scratch.yaml
 
 seed_everything: 42
 custom_modules_path: terratorch_integration
@@ -20,29 +20,24 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/wac-crater
-      name: vit_base_mae_imagenet_50pct
+      name: resnet50_scratch_50pct
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/wac-crater/checkpoints/vit_base_mae_imagenet_50pct
+        dirpath: tb_logs/wac-crater/checkpoints/resnet50_scratch_50pct
         monitor: val_map
         mode: max
         filename: best-{epoch:02d}-{val_map:.3f}
         save_last: true
-    - class_path: EarlyStopping
-      init_args:
-        monitor: val_map
-        mode: max
-        patience: 15
 
 data:
   class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
   init_args:
-    data_dir: <dataset_root>/WAC_Robbins_craters
-    annotations_dir: <dataset_root>/WAC_Robbins_craters
+    data_dir: data/wac_craters_dataset
+    annotations_dir: data/wac_craters_dataset
     train_fraction: 0.5
     batch_size: 4
     num_workers: 4
@@ -51,6 +46,7 @@ data:
     drop_no_crater_images: true
     wac_norm_means: [0.019855351744561284, 0.02773482313902164, 0.029789978425941957, 0.03144318894931929, 0.03381151791456804]
     wac_norm_stds:  [0.009741310229443915, 0.01323344600455514, 0.01407650071036384, 0.014859192415839976, 0.016153428019436693]
+
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
       init_args:
@@ -64,11 +60,11 @@ model:
     model_args:
       framework: faster-rcnn
 
-      backbone: timm_vit_base_patch16_224.mae
-      backbone_pretrained: true
+      backbone: timm_resnet50
+      backbone_pretrained: false
       backbone_in_chans: 5
-      backbone_img_size: 512
-      backbone_out_indices: [2, 5, 8, 11]
+      backbone_features_only: true
+      backbone_out_indices: [1, 2, 3, 4]
 
       num_classes: 2
       framework_min_size: 512
@@ -76,10 +72,8 @@ model:
 
       in_channels: 5
       necks:
-        - name: ReshapeTokensToImage
-          remove_cls_token: true
-          h: 32
-        - name: LearnedInterpolateToPyramidal
+        - name: SelectIndices
+          indices: [0, 1, 2, 3]
         - name: FeaturePyramidNetworkNeck
 
     freeze_backbone: false
@@ -98,10 +92,10 @@ model:
     anchor_sizes: [[8], [16], [32], [64]]
     anchor_aspect_ratios: [0.5, 1.0, 2.0]
 
-    backbone_lr: 5.0e-5
+    backbone_lr: 1.0e-4
     head_lr: 1.0e-4
-    layer_decay: 0.75
-    weight_decay: 0.05
+    layer_decay: 1.0
+    weight_decay: 1.0e-4
     head_weight_decay: 1.0e-4
     betas: [0.9, 0.999]
     warmup_steps: 500

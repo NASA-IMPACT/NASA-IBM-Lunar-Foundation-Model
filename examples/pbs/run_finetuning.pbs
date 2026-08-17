@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# Example PBS wrapper for a single-GPU finetuning run on an HPC cluster.
+# Example PBS wrapper for a single-GPU fine-tuning run on an HPC cluster.
 #
 # Edit for your site: PBS group, queue, walltime, mem/gpu resources, and the
 # conda / venv activation. The paths and the `CFG_PATH` variable below are
@@ -8,7 +8,7 @@
 # ============================================================================
 
 # --- PBS directives ---------------------------------------------------------
-#PBS -N graha-lunar-fm-finetune
+#PBS -N ni-fm-finetune
 #PBS -W group_list=YOUR_GROUP           # <-- edit
 #PBS -W umask=002
 #PBS -q gpu_normal                      # <-- edit for your queue
@@ -20,7 +20,7 @@
 #PBS -e logs/finetune.err
 
 # --- Config to run ----------------------------------------------------------
-CFG_PATH="terratorch_integration/configs/prosp/prospectivity_graha.yaml"
+CFG_PATH="terratorch_integration/configs/ice_prosp/ni_lfm_ps8_all_modalities.yaml"
 
 # --- Prep -------------------------------------------------------------------
 set +e
@@ -31,10 +31,10 @@ echo "JOB_ID: ${JOB_ID}"
 # --- Environment ------------------------------------------------------------
 # Load your site's conda / miniconda / pyenv here. Example (conda):
 #   module load miniconda3
-#   source activate graha-lunar-fm
+#   source activate ni_lfm
 # Example (pyenv):
 #   eval "$(pyenv init -)"
-#   pyenv activate graha-lunar-fm
+#   pyenv activate ni_lfm
 
 # Repo root must be importable.
 export PYTHONPATH="$PWD"
@@ -46,7 +46,7 @@ FINAL_ERR="logs/${JOB_ID}_finetune.err"
 [ -f "logs/finetune.err" ] && mv "logs/finetune.err" "$FINAL_ERR"
 
 echo "================================"
-echo "Graha Lunar-FM finetuning"
+echo "NASA-IBM Lunar Foundation Model fine-tuning"
 echo "  JobID:  ${JOB_ID}"
 echo "  Config: ${CFG_PATH}"
 echo "  Out:    ${FINAL_OUT}"
@@ -61,9 +61,9 @@ set -e
 echo ""
 echo "================================"
 if [ $EXIT_CODE -eq 0 ]; then
-    echo "Finetuning completed successfully."
+    echo "Fine-tuning completed successfully."
 else
-    echo "Finetuning failed with exit code ${EXIT_CODE}. See ${FINAL_ERR}."
+    echo "Fine-tuning failed with exit code ${EXIT_CODE}. See ${FINAL_ERR}."
 fi
 echo "================================"
 exit $EXIT_CODE
