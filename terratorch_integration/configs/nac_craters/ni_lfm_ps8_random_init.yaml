@@ -53,7 +53,6 @@ data:
     used_for_labeling_only: true
     nac_norm_mean: 0.346548   # train-split stats (289 tiles, DN/255)
     nac_norm_std: 0.159291
-    dtm_global_std: 44.24927615891305
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
       init_args:
