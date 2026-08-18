@@ -17,6 +17,8 @@ trainer:
   max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 10
+  deterministic: true
+  benchmark: false
   enable_checkpointing: true
   logger:
     class_path: TensorBoardLogger
@@ -27,6 +29,7 @@ trainer:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
+    - class_path: terratorch_integration.DeterministicAugmentation
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/nac-crater/checkpoints/ni_lfm_ps8_lora
@@ -51,8 +54,8 @@ data:
     min_diameter_m: -1    # -1 disables this filter
     drop_no_crater_images: true
     used_for_labeling_only: true
-    nac_norm_mean: 0.347012   # train-split stats, [0,1]-scaled tiles (loader maps DN -> [0,1])
-    nac_norm_std: 0.158891
+    nac_norm_mean: 0.346548   # train-split stats (289 tiles, DN/255)
+    nac_norm_std: 0.159291
     dtm_global_std: 44.24927615891305
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
@@ -117,7 +120,7 @@ model:
     score_threshold: 0.05
     iou_threshold: 0.3
     metric_kwargs:
-      max_detection_thresholds: [100, 300, 500]
+      max_detection_thresholds: [100, 300, 600]
       class_metrics: true
 
     anchor_sizes: [[4, 6], [8, 12], [16, 24], [48, 96]]
