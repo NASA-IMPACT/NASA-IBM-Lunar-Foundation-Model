@@ -1,9 +1,9 @@
 # Lunar IMP Semantic Segmentation (IMP)
-# Backbone: timm Swin-V2-Base (window 16, 256px), ImageNet-1k pretrained
+# Backbone: timm ConvNeXt-V2-Large, FCMAE pretrained then 22k/1k fine-tuned
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/upernet_swinv2_base_imagenet.yaml
+#   terratorch fit --config terratorch_integration/configs/imp/convnextv2_base_in22k.yaml
 
 seed_everything: 23
 custom_modules_path: terratorch_integration
@@ -22,7 +22,7 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/imp
-      name: upernet_swinv2_base_imagenet
+      name: convnextv2_base_in22k
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
@@ -31,7 +31,7 @@ trainer:
     - class_path: terratorch_integration.DeterministicLoss
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/imp/checkpoints/upernet_swinv2_base_imagenet
+        dirpath: tb_logs/imp/checkpoints/convnextv2_base_in22k
         monitor: val/F1_Score
         mode: max
         filename: best-{epoch:02d}-{val/loss:.3f}
@@ -90,19 +90,17 @@ model:
 
     model_factory: EncoderDecoderFactory
     model_args:
-      backbone: timm_swinv2_base_window16_256.ms_in1k
+      backbone: timm_convnextv2_base.fcmae_ft_in22k_in1k
       backbone_pretrained: true
       backbone_in_chans: 1
-      backbone_img_size: 256
-      backbone_out_indices: [0, 1, 2, 3]
+      backbone_out_indices: [0, 1, 2, 3]  # 4 stages, strides 4/8/16/32
 
       necks:
         - name: SelectIndices
           indices: [0, 1, 2, 3]
-        - name: PermuteDims        # Swin emits NHWC; the decoder needs NCHW
-          new_order: [0, 3, 1, 2]
 
-      decoder: UperNetDecoder
+      decoder: UNetDecoder
+      decoder_channels: [512, 256, 128, 64]
       head_channel_list: [256]
       head_dropout: 0.1
       num_classes: 2

@@ -97,7 +97,7 @@ model:
       backbone_remove_register_tokens: false
       backbone_modalities:
         - nac
-      backbone_patch_size: 16
+      backbone_patch_size: 8
       backbone_drop_path_rate_encoder: 0.1
       necks:
         - name: SelectIndices
