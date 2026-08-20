@@ -15,6 +15,8 @@ trainer:
   max_epochs: 100
   check_val_every_n_epoch: 1
   log_every_n_steps: 10
+  deterministic: true
+  benchmark: false
   enable_checkpointing: true
   logger:
     class_path: TensorBoardLogger
@@ -25,6 +27,7 @@ trainer:
     - class_path: LearningRateMonitor
       init_args:
         logging_interval: epoch
+    - class_path: terratorch_integration.DeterministicAugmentation
     - class_path: ModelCheckpoint
       init_args:
         dirpath: tb_logs/wac-crater/checkpoints/convnextv2_base_in22k_50pct
@@ -44,8 +47,8 @@ data:
     image_size: 512
     min_diameter_px: 10.0
     drop_no_crater_images: true
-    wac_norm_means: [0.019855351744561284, 0.02773482313902164, 0.029789978425941957, 0.03144318894931929, 0.03381151791456804]
-    wac_norm_stds:  [0.009741310229443915, 0.01323344600455514, 0.01407650071036384, 0.014859192415839976, 0.016153428019436693]
+    wac_norm_means: [0.018106, 0.025262, 0.027113, 0.028616, 0.030757]   # train-split stats (800 tiles)
+    wac_norm_stds: [0.010051, 0.013646, 0.014491, 0.015267, 0.016555]
 
     train_transforms:
       class_path: terratorch_integration.data_utils.D4DetectionTransform
@@ -85,6 +88,7 @@ model:
 
     score_threshold: 0.05
     iou_threshold: 0.5
+    eval_box_detections_per_img: 500
     metric_kwargs:
       max_detection_thresholds: [100, 300, 500]
       class_metrics: true

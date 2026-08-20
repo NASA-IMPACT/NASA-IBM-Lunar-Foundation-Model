@@ -129,6 +129,17 @@ trainer:
 - **`DeterministicLoss`** — swaps `nn.CrossEntropyLoss` for a numerically-identical build from deterministic ops (`nll_loss2d_forward_out_cuda_template` has no deterministic CUDA kernel). A no-op when `deterministic: false`.
 - **Adaptive pooling** — `_LunarLLRDMixin.setup()` replaces every `nn.AdaptiveAvgPool2d` (e.g. `UperNetDecoder`'s pyramid pool, whose backward is nondeterministic) with a slice-and-mean drop-in. Automatic; no config needed.
 
+### Required environment variables deterministic runs
+
+`deterministic: true` can throw errors during finetuning and may need to set these env var always:
+
+```bash
+# every deterministic run — cuBLAS raises on the first GEMM without it
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+
+# detection tasks only (Faster R-CNN, i.e. nac_craters/ and wac_craters/)
+export TORCHDYNAMO_DISABLE=1
+```
 
 See [determinism.py](determinism.py) for details.
 
