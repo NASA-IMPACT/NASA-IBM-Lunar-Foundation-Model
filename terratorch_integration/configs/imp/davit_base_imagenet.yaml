@@ -1,11 +1,9 @@
 # Lunar IMP Semantic Segmentation (IMP)
-# Backbone: ResNet-34 (SMP U-Net), randomly initialized (no pretraining)
-#
-# Requires: pip install segmentation-models-pytorch
+# Backbone: ImageNet-pretrained ResNet-50 via timm
 #
 # RUN:
 #   PYTHONPATH=.:$PYTHONPATH \
-#   terratorch fit --config terratorch_integration/configs/imp/unet_resnet34_scratch.yaml
+#   terratorch fit --config terratorch_integration/configs/imp/davit_base_imagenet.yaml
 
 seed_everything: 23
 custom_modules_path: terratorch_integration
@@ -24,7 +22,7 @@ trainer:
     class_path: TensorBoardLogger
     init_args:
       save_dir: tb_logs/imp
-      name: unet_resnet34_scratch
+      name: davit_base_imagenet
   callbacks:
     - class_path: LearningRateMonitor
       init_args:
@@ -33,7 +31,7 @@ trainer:
     - class_path: terratorch_integration.DeterministicLoss
     - class_path: ModelCheckpoint
       init_args:
-        dirpath: tb_logs/imp/checkpoints/unet_resnet34_scratch
+        dirpath: tb_logs/imp/checkpoints/davit_base_imagenet
         monitor: val/F1_Score
         mode: max
         filename: best-{epoch:02d}-{val/loss:.3f}
@@ -78,23 +76,34 @@ data:
       - class_path: albumentations.pytorch.transforms.ToTensorV2
 
 model:
-  # Using TerraTorch task to better integrate with SMPModelFactory
-  class_path: terratorch.tasks.SemanticSegmentationTask
+  class_path: terratorch_integration.LunarSegmentationTask
   init_args:
-    lr: 1.0e-4
-    optimizer: AdamW
-    optimizer_hparams:
-      weight_decay: 1.0e-4
-    model_factory: SMPModelFactory
+    backbone_lr: 1.0e-4
+    head_lr: 1.0e-4
+    layer_decay: 1.0
+    weight_decay: 1.0e-4
+    head_weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+    warmup_steps: 500
+    eta_min: 1.0e-6
+
+    model_factory: EncoderDecoderFactory
     model_args:
-      model: Unet
-      backbone: resnet34
-      pretrained: false
-      bands: [0]
-      in_channels: 1
+      backbone: timm_davit_base.msft_in1k
+      backbone_pretrained: true
+      backbone_in_chans: 1
+      backbone_out_indices: [0, 1, 2, 3]
+
+      necks:
+        - name: SelectIndices
+          indices: [0, 1, 2, 3]
+
+      decoder: UNetDecoder
+      decoder_channels: [512, 256, 128, 64]
+      head_channel_list: [256]
+      head_dropout: 0.1
       num_classes: 2
 
-    # No aux_loss: SMP builds encoder+decoder as one unit with no aux head.
     loss:
       dice: 1.0
       ce: 0.25
