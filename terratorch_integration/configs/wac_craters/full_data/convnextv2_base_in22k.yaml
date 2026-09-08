@@ -1,0 +1,106 @@
+# Lunar Crater Detection (LRO WAC, 5-band vis) — 100% training data
+# Backbone: timm ConvNeXt-V2-Base, FCMAE pretrained then 22k/1k fine-tuned
+#
+# RUN:
+#   PYTHONPATH=.:$PYTHONPATH \
+#   terratorch fit --config terratorch_integration/configs/wac_craters/full_data/convnextv2_base_in22k.yaml
+
+seed_everything: 42
+custom_modules_path: terratorch_integration
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  precision: "32"
+  max_epochs: 100
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 10
+  deterministic: true
+  benchmark: false
+  enable_checkpointing: true
+  logger:
+    class_path: TensorBoardLogger
+    init_args:
+      save_dir: tb_logs/wac-crater
+      name: convnextv2_base_in22k_100pct
+  callbacks:
+    - class_path: LearningRateMonitor
+      init_args:
+        logging_interval: epoch
+    - class_path: terratorch_integration.DeterministicAugmentation
+    - class_path: ModelCheckpoint
+      init_args:
+        dirpath: tb_logs/wac-crater/checkpoints/convnextv2_base_in22k_100pct
+        monitor: val_map
+        mode: max
+        filename: best-{epoch:02d}-{val_map:.3f}
+        save_last: true
+
+data:
+  class_path: terratorch_integration.data_adapter.LunarWACCraterDataModule
+  init_args:
+    data_dir: data/wac_craters_dataset
+    annotations_dir: data/wac_craters_dataset
+    train_fraction: 1.0
+    batch_size: 4
+    num_workers: 4
+    image_size: 512
+    min_diameter_px: 10.0
+    drop_no_crater_images: true
+    wac_norm_means: [0.018106, 0.025262, 0.027113, 0.028616, 0.030757]   # train-split stats (800 tiles)
+    wac_norm_stds: [0.010051, 0.013646, 0.014491, 0.015267, 0.016555]
+
+    train_transforms:
+      class_path: terratorch_integration.data_utils.D4DetectionTransform
+      init_args:
+        image_keys: [image, vis]
+        p: 1.0
+
+model:
+  class_path: terratorch_integration.LunarObjectDetectionTask
+  init_args:
+    model_factory: ObjectDetectionModelFactory
+    model_args:
+      framework: faster-rcnn
+
+      backbone: timm_convnextv2_base.fcmae_ft_in22k_in1k
+      backbone_pretrained: true
+      backbone_in_chans: 5
+      backbone_features_only: true
+      backbone_out_indices: [0, 1, 2, 3]
+
+      num_classes: 2
+      framework_min_size: 512
+      framework_max_size: 512
+
+      in_channels: 5
+      necks:
+        - name: SelectIndices
+          indices: [0, 1, 2, 3]
+        - name: FeaturePyramidNetworkNeck
+
+    freeze_backbone: false
+    freeze_decoder: false
+
+    class_names:
+      - Background
+      - Crater
+
+    score_threshold: 0.05
+    iou_threshold: 0.5
+    eval_box_detections_per_img: 500
+    metric_kwargs:
+      max_detection_thresholds: [100, 300, 500]
+      class_metrics: true
+
+    anchor_sizes: [[8], [16], [32], [64]]
+    anchor_aspect_ratios: [0.5, 1.0, 2.0]
+
+    backbone_lr: 1.0e-4
+    head_lr: 1.0e-4
+    layer_decay: 1.0
+    weight_decay: 1.0e-4
+    head_weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+    warmup_steps: 500
+    eta_min: 1.0e-6

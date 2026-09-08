@@ -1,0 +1,115 @@
+# Lunar IMP Semantic Segmentation (IMP)
+# Backbone: timm ConvNeXt-Base, ImageNet-22k pretrained then 1k fine-tuned
+#
+# RUN:
+#   PYTHONPATH=.:$PYTHONPATH \
+#   terratorch fit --config terratorch_integration/configs/imp/convnext_base_in22k.yaml
+
+seed_everything: 23
+custom_modules_path: terratorch_integration
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  precision: "32"
+  max_epochs: 600
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 5
+  gradient_clip_val: 1.0
+
+  deterministic: true
+  benchmark: false
+  logger:
+    class_path: TensorBoardLogger
+    init_args:
+      save_dir: tb_logs/imp
+      name: convnext_base_in22k
+  callbacks:
+    - class_path: LearningRateMonitor
+      init_args:
+        logging_interval: step
+    - class_path: terratorch_integration.DeterministicAugmentation
+    - class_path: terratorch_integration.DeterministicLoss
+    - class_path: ModelCheckpoint
+      init_args:
+        dirpath: tb_logs/imp/checkpoints/convnext_base_in22k
+        monitor: val/F1_Score
+        mode: max
+        filename: best-{epoch:02d}-{val/loss:.3f}
+        save_top_k: 1
+        save_last: false
+data:
+  class_path: terratorch.datamodules.GenericNonGeoSegmentationDataModule
+  init_args:
+    batch_size: 32
+    num_workers: 1
+    rgb_indices:
+      - 0
+      - 0
+      - 0
+    train_data_root: data/imp_dataset/all
+    train_label_data_root: data/imp_dataset/all
+    val_data_root: data/imp_dataset/all
+    val_label_data_root: data/imp_dataset/all
+    test_data_root: data/imp_dataset/all
+    test_label_data_root: data/imp_dataset/all
+    predict_data_root: data/imp_dataset/all
+    train_split: data/imp_dataset/train.txt
+    val_split: data/imp_dataset/val.txt
+    test_split: data/imp_dataset/test.txt
+    num_classes: 2
+    ignore_split_file_extensions: false
+    img_grep: "*_img.tif"
+    label_grep: "*_mask.tif"
+    no_label_replace: -1
+    no_data_replace: 0
+    means:
+      - 0.027375
+    stds:
+      - 0.014783
+    train_transform:
+      - class_path: albumentations.D4
+      - class_path: albumentations.RandomBrightnessContrast
+        init_args:
+          brightness_limit: 0.15
+          contrast_limit: 0.15
+          p: 0.5
+      - class_path: albumentations.pytorch.transforms.ToTensorV2
+
+model:
+  class_path: terratorch_integration.LunarSegmentationTask
+  init_args:
+    # Flat CNN recipe — do NOT enable LLRD (unfair baseline tuning).
+    backbone_lr: 1.0e-4
+    head_lr: 1.0e-4
+    layer_decay: 1.0
+    weight_decay: 1.0e-4
+    head_weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+    warmup_steps: 500
+    eta_min: 1.0e-6
+
+    model_factory: EncoderDecoderFactory
+    model_args:
+      backbone: timm_convnext_base.fb_in22k_ft_in1k    # ImageNet-pretrained
+      backbone_pretrained: true
+      backbone_in_chans: 1
+      backbone_out_indices: [0, 1, 2, 3]  # 4 stages, strides 4/8/16/32
+      necks:
+        - name: SelectIndices
+          indices: [0, 1, 2, 3]
+      decoder: UNetDecoder
+      decoder_channels: [512, 256, 128, 64]
+      head_channel_list: [256]
+      head_dropout: 0.1
+      num_classes: 2
+
+    loss:
+      dice: 1.0
+      ce: 0.25
+      lovasz: 0.5
+    class_weights: [0.1, 0.9]
+    freeze_backbone: false
+    freeze_decoder: false
+    ignore_index: -1
+    plot_on_val: 5

@@ -1,0 +1,71 @@
+NASA-IBM Lunar Foundation Model
+Copyright 2024-2025 IBM Corp.
+Copyright 2024 IBM and the Lunar-FM authors.
+
+This product includes software developed at IBM Corp., licensed under the
+Apache License, Version 2.0. See the LICENSE file for the full license text.
+
+================================================================================
+Third-party code
+================================================================================
+
+This distribution bundles source derived from the projects listed below. Each
+retains its original copyright and license; the notices are reproduced here as
+required. Per-file headers in the source tree are authoritative where they
+differ in detail from this summary.
+
+--------------------------------------------------------------------------------
+1. 4M / MultiMAE  (Apache License 2.0)
+--------------------------------------------------------------------------------
+Copyright 2024 EPFL and Apple Inc.
+
+  https://github.com/apple/ml-4m
+  https://github.com/EPFL-VILAB/MultiMAE
+
+Much of the `terramind/` package — the multimodal encoder/decoder embeddings,
+modality-info schema, and tokenizer scaffolding — derives from the 4M codebase
+and its MultiMAE predecessor. Licensed under the Apache License, Version 2.0.
+
+--------------------------------------------------------------------------------
+2. Additional upstream sources referenced by per-file headers
+--------------------------------------------------------------------------------
+Portions of `terramind/` are adapted from the following projects, as recorded in
+the headers of the individual files. All are Apache-2.0 or MIT licensed.
+
+  big_vision (FlexiViT PI-resize)      Apache-2.0
+    https://github.com/google-research/big_vision
+    Beyer et al., "FlexiViT: One Model for All Patch Sizes", CVPR 2023
+
+  pytorch-image-models (timm)          Apache-2.0
+    https://github.com/huggingface/pytorch-image-models
+
+  ConvNeXt                             MIT
+    https://github.com/facebookresearch/ConvNeXt
+
+  DINO / DINOv2 / MoCo-v3              Apache-2.0
+    https://github.com/facebookresearch/dino
+    https://github.com/facebookresearch/dinov2
+    https://github.com/facebookresearch/moco-v3
+
+  CLIP                                 MIT
+    https://github.com/openai/CLIP
+
+  vector-quantize-pytorch              MIT
+    https://github.com/lucidrains/vector-quantize-pytorch
+
+  NWT-pytorch                          MIT
+    https://github.com/lucidrains/NWT-pytorch
+
+  diffusers                            Apache-2.0
+    https://github.com/huggingface/diffusers
+
+  DDIM / pytorch_diffusion / diffusion MIT
+    https://github.com/ermongroup/ddim
+    https://github.com/pesser/pytorch_diffusion
+    https://github.com/hojonathanho/diffusion
+
+  fourier-feature-networks             MIT
+    https://github.com/tancik/fourier-feature-networks
+
+  TensorFlow TPU models                Apache-2.0
+    https://github.com/tensorflow/tpu
