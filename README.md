@@ -58,8 +58,6 @@ PYTHONPATH=. terratorch fit -c terratorch_integration/configs/nac_craters/ni_lfm
 Common overrides:
 
 ```bash
-# Short smoke test: one bounded epoch on CPU, no data workers
-PYTHONPATH=. terratorch fit -c <config>.yaml -c examples/smoke_overlay.yaml --data.num_workers 0
 
 # Point at a specific data root without editing the yaml
 PYTHONPATH=. terratorch fit -c <config>.yaml \
@@ -67,8 +65,6 @@ PYTHONPATH=. terratorch fit -c <config>.yaml \
   --data.metadata_file /path/to/metadata.parquet \
   --data.annotations_file /path/to/annotations.json
 ```
-
-[`examples/smoke_overlay.yaml`](examples/smoke_overlay.yaml) bounds the run by epoch rather than with `--trainer.max_steps 1`; the latter truncates the epoch before validation, so any config with a val-monitored `EarlyStopping`/`ModelCheckpoint` aborts on a missing metric. The file explains that and the `limit_*_batches` int-vs-float trap.
 
 Note: `terratorch fit` writes `config.yaml`/`config_deploy.yaml` to CWD by default — this is Lightning CLI's dumped merged config, not a project file. Delete after each run or configure `save_config_kwargs` to suppress.
 
