@@ -19,6 +19,23 @@ pip install -e .
 
 ## Weights and data
 
+
+Model weights and config can be downloaded from HuggingFace using Python. See examples below:
+
+```bash
+from huggingface_hub import snapshot_download
+
+# Only download model weights and config
+snapshot_download(repo_id="nasa-ibm-ai4science/NASA-IBM-Lunar-Foundation-Model", allow_patterns="backbone/*", local_dir="./")
+
+# Download entire model HuggingFace directory
+snapshot_download(repo_id="nasa-ibm-ai4science/NASA-IBM-Lunar-Foundation-Model", local_dir="./")
+
+# Download ice-prospectivity data
+snapshot_download(repo_id="nasa-ibm-ai4science/Sombench-Ice-Prospectivity-Regression", local_dir="./")
+
+```
+
 Configs use two relative roots, `data/` and `backbone/`, so no absolute paths are
 baked into any YAML. Point them at the shared release bundle with two symlinks:
 
