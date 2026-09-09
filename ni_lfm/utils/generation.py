@@ -31,8 +31,8 @@ INDEX_FILE_KEYS = {
     "dtm_3m": "DTM_3M_TILE",
     "nac": "NAC_TILE",
     "slope_3m": "SLOPE_3M_TILE",
-    "static_maps": "METADATA_AVG_TILE",
-    "metadata": "METADATA_AVG_TILE",
+    "static_maps": "METADATA_TILE",
+    "metadata": "METADATA_TILE",
 }
 
 
@@ -294,7 +294,7 @@ def denormalize_data(data: torch.Tensor, modality: str, modality_info: dict):
 
     stats = info.get("stats")
     scaler = info.get("scaler")
-    if not stats or scaler in (None, "None"):
+    if not stats or scaler in {None, "None", "local_mean_std"}:
         return data
 
     def _as_seq(v):
